@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SizeInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -219,6 +220,23 @@ static opt<bool> Verbose("verbose",
                          cat(DwarfDumpCategory));
 static alias VerboseAlias("v", desc("Alias for -verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory));
+
+static SubCommand SizeInfoCmd("size-info",
+                              "Emit JSON-formatted code size metrics.");
+static opt<std::string>
+    SizeInfoBaselineDI("baseline", init(""),
+                       desc("Path to debug info for the baseline program."),
+                       value_desc("filename"), sub(SizeInfoCmd));
+static opt<std::string>
+    SizeInfoTargetDI("target", init(""),
+                     desc("Path to debug info for the target program. Its code "
+                          "size metrics are diffed against the baseline."),
+                     value_desc("filename"), sub(SizeInfoCmd));
+static opt<std::string> SizeInfoStatsDir(
+    "stats-dir", init(""),
+    desc("Path to the output directory. This directory is created if needed."),
+    value_desc("filename"), sub(SizeInfoCmd));
+
 } // namespace
 /// @}
 //===----------------------------------------------------------------------===//
@@ -555,6 +573,33 @@ int main(int argc, char **argv) {
 
   if (Help) {
     PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
+    return 0;
+  }
+
+  if (SizeInfoCmd) {
+    // Define a helper which collects size info from the DWARF within a bundle.
+    StringContext StrCtx;
+    auto getSizeStats = [&](const std::string &Filename) -> SizeInfoStats {
+      using namespace std::placeholders;
+      SizeInfoStats SizeStats{StrCtx};
+      std::vector<std::string> Objects = expandBundle(Filename);
+      auto collectSizeInfoHelper =
+          std::bind(collectSizeInfo, std::ref(SizeStats), _1, _2, _3, _4);
+      for (auto Object : Objects)
+        handleFile(Object, collectSizeInfoHelper, errs());
+      SizeStats.finalize();
+      return SizeStats;
+    };
+
+    SizeInfoStats BaselineSizeStats = getSizeStats(SizeInfoBaselineDI);
+    if (SizeInfoTargetDI.empty()) {
+      // If no target is specified, just emit size stats for the baseline.
+      BaselineSizeStats.emitStats(SizeInfoStatsDir);
+    } else {
+      // Emit a code size diff between the baseline and the target.
+      SizeInfoStats TargetSizeStats = getSizeStats(SizeInfoTargetDI);
+      TargetSizeStats.emitDiffstats(BaselineSizeStats, SizeInfoStatsDir);
+    }
     return 0;
   }
 
