@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 
-// RUN: %clang -arch x86_64 -c -g %s -o %t.o
+// RUN: %clang -std=c++11 -arch x86_64 -c -g %s -o %t.o
 
 // TODO: Check in these binaries to make this test less brittle.
 
