@@ -228,10 +228,20 @@ static opt<std::string>
                        desc("Path to debug info for the baseline program."),
                        value_desc("filename"), sub(SizeInfoCmd));
 static opt<std::string>
+    SizeInfoBaselineDIList("baseline-list", init(""),
+                           desc("Path to a file containing a newline-separated "
+                                "list of objects making up the baseline."),
+                           value_desc("filename"), sub(SizeInfoCmd));
+static opt<std::string>
     SizeInfoTargetDI("target", init(""),
                      desc("Path to debug info for the target program. Its code "
                           "size metrics are diffed against the baseline."),
                      value_desc("filename"), sub(SizeInfoCmd));
+static opt<std::string>
+    SizeInfoTargetDIList("target-list", init(""),
+                         desc("Path to a file containing a newline-separated "
+                              "list of objects making up the target."),
+                         value_desc("filename"), sub(SizeInfoCmd));
 static opt<std::string> SizeInfoStatsDir(
     "stats-dir", init(""),
     desc("Path to the output directory. This directory is created if needed."),
@@ -559,6 +569,43 @@ static std::vector<std::string> expandBundle(const std::string &InputPath) {
   return BundlePaths;
 }
 
+static std::vector<std::string> getFileOrFileList(std::string File,
+                                                  std::string FileList) {
+  // If a file was specified, use it. There should be no file list.
+  if (!File.empty()) {
+    if (!FileList.empty()) {
+      errs() << "error: Cannot specify file (" << File << ") and a file list ("
+             << FileList << ")\n";
+      exit(1);
+    }
+
+    return {std::move(File)};
+  }
+
+  // A file was not specified. Try reading the file list if one exists.
+  if (FileList.empty())
+    return {};
+
+  // Open the list of files.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(FileList);
+  error(FileList, BufOrErr.getError());
+  std::unique_ptr<MemoryBuffer> MemBuf = std::move(BufOrErr.get());
+  StringRef Buf = MemBuf->getBuffer();
+
+  // Read each entry in the list, ignoring comment lines.
+  std::vector<std::string> Files;
+  while (!Buf.empty()) {
+    auto Split = Buf.split('\n');
+    StringRef Line = Split.first.trim();
+    Buf = Split.second;
+    if (Line.startswith("#"))
+      continue;
+    Files.push_back(Line.str());
+  }
+  return Files;
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -579,25 +626,32 @@ int main(int argc, char **argv) {
   if (SizeInfoCmd) {
     // Define a helper which collects size info from the DWARF within a bundle.
     StringContext StrCtx;
-    auto getSizeStats = [&](const std::string &Filename) -> SizeInfoStats {
+    auto getSizeStats = [&](ArrayRef<std::string> Filenames) -> SizeInfoStats {
       using namespace std::placeholders;
       SizeInfoStats SizeStats{StrCtx};
-      std::vector<std::string> Objects = expandBundle(Filename);
       auto collectSizeInfoHelper =
           std::bind(collectSizeInfo, std::ref(SizeStats), _1, _2, _3, _4);
-      for (auto Object : Objects)
-        handleFile(Object, collectSizeInfoHelper, errs());
+      for (const std::string &Filename : Filenames) {
+        std::vector<std::string> Objects = expandBundle(Filename);
+        for (auto Object : Objects)
+          handleFile(Object, collectSizeInfoHelper, errs());
+      }
       SizeStats.finalize();
       return SizeStats;
     };
 
-    SizeInfoStats BaselineSizeStats = getSizeStats(SizeInfoBaselineDI);
-    if (SizeInfoTargetDI.empty()) {
+    std::vector<std::string> BaselineFiles =
+        getFileOrFileList(SizeInfoBaselineDI, SizeInfoBaselineDIList);
+    std::vector<std::string> TargetFiles =
+        getFileOrFileList(SizeInfoTargetDI, SizeInfoTargetDIList);
+
+    SizeInfoStats BaselineSizeStats = getSizeStats(BaselineFiles);
+    if (TargetFiles.empty()) {
       // If no target is specified, just emit size stats for the baseline.
       BaselineSizeStats.emitStats(SizeInfoStatsDir);
     } else {
       // Emit a code size diff between the baseline and the target.
-      SizeInfoStats TargetSizeStats = getSizeStats(SizeInfoTargetDI);
+      SizeInfoStats TargetSizeStats = getSizeStats(TargetFiles);
       TargetSizeStats.emitDiffstats(BaselineSizeStats, SizeInfoStatsDir);
     }
     return 0;
