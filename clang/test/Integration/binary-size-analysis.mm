@@ -19,6 +19,8 @@
 struct A {
   int x = 1;
   void __attribute__((always_inline)) method() { ++x; }
+  void __attribute__((always_inline)) method1() { method(); }
+  void __attribute__((always_inline)) method2() { method1(); }
 };
 
 struct B : A {};
@@ -59,7 +61,7 @@ namespace NS2 {
 
 int main() {
   A a1;
-  a1.method();
+  a1.method2();
 
   B b1;
   b1.method();
@@ -79,36 +81,53 @@ int main() {
   return a1.x;
 }
 
+// FILE: [file];main [function] 290
+// FILE: [file];_ZN3NS24BaseC2Ev [function] 55
 // FILE: [file];_ZN7DerivedC2Ev [function] 55
-// FILE: [file];_ZN7Derived7method3Ev [function] 35
+// FILE: [file];_ZN7Derived7method3Ev [function] 38
 // FILE: [file];_ZZN7Derived7method3EvENK3$_0clEv [function] 30
+// FILE: [file];_ZN3NS14BaseC2Ev [function] 28
 // FILE: [file];_ZN4BaseC2Ev [function] 28
 // FILE: [file];_ZN1AC1Ev [function] 27
 // FILE: [file];_ZN1BC1Ev [function] 27
 // FILE: [file];_ZN1BC2Ev [function] 27
+// FILE: [file];_ZN3NS14BaseC1Ev [function] 27
+// FILE: [file];_ZN3NS24BaseC1Ev [function] 27
 // FILE: [file];_ZN7DerivedC1Ev [function] 27
 // FILE: [file];_ZN1AC2Ev [function] 20
+// FILE: [file];_ZN3NS14Base3fooEv [function] 10
 // FILE: [file];_ZN4Base6methodEv [function] 10
 // FILE: [file];_ZN7Derived6methodEv [function] 10
 // FILE: [file];_ZN7Derived7method2Ev [function] 10
 
-// CLASS: Base [class];Derived [class];_ZN7Derived7method3Ev [function] 35
+// CLASS: Base [class];Derived [class];_ZN7Derived7method3Ev [function] 38
 // CLASS: Base [class];Derived [class];_ZN7Derived6methodEv [function] 10
 // CLASS: Base [class];Derived [class];_ZN7Derived7method2Ev [function] 10
 // CLASS: Base [class];_ZN4Base6methodEv [function] 10
+// CLASS: Derived [class];_ZN7Derived7method3Ev [function] 38
+// CLASS: Derived [class];_ZN7Derived6methodEv [function] 10
+// CLASS: Derived [class];_ZN7Derived7method2Ev [function] 10
 // CLASS: NS1::Base [class];_ZN3NS14Base3fooEv [function] 10
 
+// FUNCTION: main [function] 290
+// FUNCTION: _ZN3NS24BaseC2Ev [function] 55
 // FUNCTION: _ZN7DerivedC2Ev [function] 55
-// FUNCTION: _ZN7Derived7method3Ev [function] 35
+// FUNCTION: _ZN7Derived7method3Ev [function] 38
 // FUNCTION: _ZZN7Derived7method3EvENK3$_0clEv [function] 30
+// FUNCTION: _ZN3NS14BaseC2Ev [function] 28
 // FUNCTION: _ZN4BaseC2Ev [function] 28
 // FUNCTION: _ZN1AC1Ev [function] 27
 // FUNCTION: _ZN1BC1Ev [function] 27
 // FUNCTION: _ZN1BC2Ev [function] 27
+// FUNCTION: _ZN3NS14BaseC1Ev [function] 27
+// FUNCTION: _ZN3NS24BaseC1Ev [function] 27
 // FUNCTION: _ZN7DerivedC1Ev [function] 27
 // FUNCTION: _ZN1AC2Ev [function] 20
+// FUNCTION: _ZN3NS14Base3fooEv [function] 10
 // FUNCTION: _ZN4Base6methodEv [function] 10
 // FUNCTION: _ZN7Derived6methodEv [function] 10
 // FUNCTION: _ZN7Derived7method2Ev [function] 10
 
 // INLINING: _ZN1A6methodEv [inlining-target] 14
+// INLINING: _ZN1A7method1Ev [inlining-target];_ZN1A6methodEv [inlining-target] 14
+// INLINING: _ZN1A7method2Ev [inlining-target];_ZN1A7method1Ev [inlining-target];_ZN1A6methodEv [inlining-target] 14

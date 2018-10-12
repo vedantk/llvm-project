@@ -150,7 +150,7 @@ private:
 
   void addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie ParentDie);
 
-  void recordInlinedInstance(DWARFDie InlinedDie);
+  void recordInlinedInstance(DWARFDie InlinedDie, DWARFDie ParentDie);
 
   void recordInheritanceInfo(DWARFDie ClassDie);
 

@@ -36,8 +36,6 @@ void CodeGroup::finalize() {
   if (Finalized)
     return;
 
-  assert((SubGroups.empty() || !SizeInBytes) && "Group with unexpected size");
-
   if (SizeInBytes) {
     Finalized = true;
     return;
@@ -138,10 +136,13 @@ void SizeInfoStats::recordInheritanceInfo(DWARFDie ClassDie) {
 }
 
 /// Record an inlined instance of a function.
-void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie) {
+void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
+                                          DWARFDie ParentDie) {
   DWARFDie Origin =
       InlinedDie.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
   assert(Origin && "DW_TAG_inlined_subroutine without origin");
+
+  // Create a record for this inlined subroutine.
   StringRef InlinedFunction = Origin.getName(DINameKind::LinkageName);
   CodeGroup &CG =
       getOrCreateCodeGroup(InlinedFunction, CodeGroupKind::InliningTarget);
@@ -150,6 +151,18 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie) {
       CG.addPCRange(Range.LowPC, Range.HighPC);
   } else {
     consumeError(RangesOrErr.takeError());
+  }
+
+  // An inlined function may itself contain inlined code. Add inlining targets
+  // as sub-groups of the inlining target they're nested within.
+  if (ParentDie.getTag() == DW_TAG_inlined_subroutine) {
+    DWARFDie ParentOrigin =
+        ParentDie.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
+    StringRef ParentInlinedFunction =
+        ParentOrigin.getName(DINameKind::LinkageName);
+    CodeGroup &ParentCG = getOrCreateCodeGroup(ParentInlinedFunction,
+                                               CodeGroupKind::InliningTarget);
+    ParentCG.addSubGroup(CG);
   }
 }
 
@@ -203,8 +216,7 @@ void SizeInfoStats::collectSizeInfoInDIE(DWARFDie ParentDie,
     if (Die.isSubprogramDIE()) {
       collectSizeInfoInFunction(Die, FileCG);
     } else if (Die.getTag() == DW_TAG_inlined_subroutine) {
-      recordInlinedInstance(Die);
-      continue;
+      recordInlinedInstance(Die, ParentDie);
     } else if (Die.getTag() == DW_TAG_class_type ||
                Die.getTag() == DW_TAG_structure_type) {
       recordInheritanceInfo(Die);
@@ -283,12 +295,7 @@ static void sortCodeGroups(std::vector<CodeGroup *> &Groups,
 static void emitCodeGroupRecords(CodeGroup *CG,
                                  CodeGroupWeighter getCodeGroupWeight,
                                  std::vector<CodeGroup *> &Ancestors,
-                                 SmallPtrSetImpl<CodeGroup *> &Visited,
                                  raw_ostream &OS) {
-  // Don't emit a code group twice.
-  if (!Visited.insert(CG).second)
-    return;
-
   // Sort sub-groups by size and filter out empty groups.
   std::vector<CodeGroup *> SortedGroups(CG->getSubGroups().begin(),
                                         CG->getSubGroups().end());
@@ -310,7 +317,7 @@ static void emitCodeGroupRecords(CodeGroup *CG,
   // Update the list of ancestor code groups and recurse.
   Ancestors.push_back(CG);
   for (CodeGroup *SubGroup : SortedGroups)
-    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, Visited, OS);
+    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, OS);
   Ancestors.pop_back();
 }
 
@@ -336,9 +343,8 @@ static void emitFlamegraphFile(std::vector<CodeGroup *> &Groups,
   raw_ostream &OS = *RawFdStream.get();
 
   std::vector<CodeGroup *> Ancestors;
-  SmallPtrSet<CodeGroup *, 32> Visited;
   for (CodeGroup *CG : Groups)
-    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, Visited, OS);
+    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, OS);
 }
 
 void SizeInfoStats::emitStats(StringRef StatsDir,
