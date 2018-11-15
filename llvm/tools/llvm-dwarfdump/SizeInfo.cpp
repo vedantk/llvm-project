@@ -151,6 +151,7 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
       CG.addPCRange(Range.LowPC, Range.HighPC);
   } else {
     consumeError(RangesOrErr.takeError());
+    return;
   }
 
   // An inlined function may itself contain inlined code. Add inlining targets
@@ -307,6 +308,8 @@ static void emitCodeGroupRecords(CodeGroup *CG,
     // Emit a semicolon-separated path from the root node to this leaf.
     for (CodeGroup *Ancestor : Ancestors) {
       Ancestor->getKey().dump(OS);
+      if (Ancestor->getKey().getKind() == CodeGroupKind::InliningTarget)
+        OS << " " << Ancestor->getSize();
       OS << ";";
     }
     CG->getKey().dump(OS);
