@@ -69,6 +69,10 @@ static bool detectInheritanceCycle(CodeGroup &Derived, CodeGroup &Base) {
 }
 #endif
 
+static bool isClassOrStruct(dwarf::Tag Tag) {
+  return Tag == DW_TAG_structure_type || Tag == DW_TAG_class_type;
+}
+
 /// Get the fully-qualified name of a definition (ignore AT_specification).
 /// Return None if the name cannot be constructed.
 Optional<StringRef> SizeInfoStats::getQualifiedName(DWARFDie Die) {
@@ -99,8 +103,7 @@ Optional<StringRef> SizeInfoStats::getQualifiedName(DWARFDie Die) {
     // Advance to the parent. Only class/struct/namespace qualifiers.
     Die = Die.getParent();
     auto Tag = Die.getTag();
-    if (Tag != DW_TAG_class_type && Tag != DW_TAG_structure_type &&
-        Tag != DW_TAG_namespace)
+    if (!isClassOrStruct(Tag) && Tag != DW_TAG_namespace)
       break;
   }
 
@@ -167,19 +170,53 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
   }
 }
 
+/// Find the unqualified root type of \p Die.
+static DWARFDie findRootType(DWARFDie Die) {
+  DWARFDie TypeDie = Die.getAttributeValueAsReferencedDie(dwarf::DW_AT_type);
+  while (true) {
+    DWARFDie UnderlyingTypeDie =
+        TypeDie.getAttributeValueAsReferencedDie(dwarf::DW_AT_type);
+    if (UnderlyingTypeDie)
+      TypeDie = UnderlyingTypeDie;
+    else
+      break;
+  }
+  return TypeDie;
+}
+
 /// Add \p FuncCG to its innermost surrounding class's code group.
-void SizeInfoStats::addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie ParentDie) {
+void SizeInfoStats::addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie FuncDie) {
+  auto AddToClassCG = [&](DWARFDie ClassDie) {
+    Optional<StringRef> Classname = getQualifiedName(ClassDie);
+    if (Classname) {
+      CodeGroup &ClassCG =
+          getOrCreateCodeGroup(*Classname, CodeGroupKind::Class);
+      ClassCG.addSubGroup(FuncCG);
+      return;
+    }
+  };
+
+  // The function may have an AT_object_pointer field, which in turn has
+  // the right type.
+  DWARFDie ObjDie =
+      FuncDie.getAttributeValueAsReferencedDie(DW_AT_object_pointer);
+  if (ObjDie) {
+    DWARFDie TypeDie = findRootType(ObjDie);
+    if (isClassOrStruct(TypeDie.getTag())) {
+      AddToClassCG(TypeDie);
+      return;
+    }
+  }
+
+  // The function may be nested within a class/struct definition. Find that
+  // definition.
+  DWARFDie ParentDie = FuncDie.getParent();
   for (; ParentDie.isValid(); ParentDie = ParentDie.getParent()) {
     dwarf::Tag Tag = ParentDie.getTag();
     if (Tag == DW_TAG_subprogram || Tag == DW_TAG_compile_unit)
       return;
-    if (Tag == DW_TAG_class_type || Tag == DW_TAG_structure_type) {
-      Optional<StringRef> Classname = getQualifiedName(ParentDie);
-      if (!Classname)
-        continue;
-      CodeGroup &ClassCG =
-          getOrCreateCodeGroup(*Classname, CodeGroupKind::Class);
-      ClassCG.addSubGroup(FuncCG);
+    if (isClassOrStruct(Tag)) {
+      AddToClassCG(ParentDie);
       return;
     }
   }
@@ -206,7 +243,7 @@ void SizeInfoStats::collectSizeInfoInFunction(DWARFDie FuncDie,
   // Add the function to its enclosing class if there is one, even if the
   // function is a delcaration. It may not be possible to find the enclosing
   // class from the definition DIE.
-  addToClassCodeGroup(FuncCG, FuncDie.getParent());
+  addToClassCodeGroup(FuncCG, FuncDie);
 }
 
 /// A recursive helper for \ref collectSizeInfo which drills into subprograms

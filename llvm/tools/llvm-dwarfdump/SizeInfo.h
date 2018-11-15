@@ -148,7 +148,7 @@ private:
 
   void collectSizeInfoInFunction(DWARFDie FuncDie, CodeGroup &FileCG);
 
-  void addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie ParentDie);
+  void addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie FuncDie);
 
   void recordInlinedInstance(DWARFDie InlinedDie, DWARFDie ParentDie);
 
