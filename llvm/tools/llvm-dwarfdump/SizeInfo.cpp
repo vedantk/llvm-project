@@ -201,10 +201,11 @@ void SizeInfoStats::addToClassCodeGroup(CodeGroup &FuncCG, DWARFDie FuncDie) {
   DWARFDie ObjDie =
       FuncDie.getAttributeValueAsReferencedDie(DW_AT_object_pointer);
   if (ObjDie) {
-    DWARFDie TypeDie = findRootType(ObjDie);
-    if (isClassOrStruct(TypeDie.getTag())) {
-      AddToClassCG(TypeDie);
-      return;
+    if (DWARFDie TypeDie = findRootType(ObjDie)) {
+      if (isClassOrStruct(TypeDie.getTag())) {
+        AddToClassCG(TypeDie);
+        return;
+      }
     }
   }
 
