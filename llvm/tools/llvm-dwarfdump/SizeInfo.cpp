@@ -18,7 +18,7 @@ using namespace dwarf;
 
 void CodeGroup::addPCRange(uint64_t LowPC, uint64_t HighPC) {
   assert(!Finalized && "Cannot add PC range");
-  assert(LowPC < HighPC && "Invalid PC range");
+  assert(LowPC <= HighPC && "Invalid PC range");
   SizeInBytes += HighPC - LowPC;
 }
 
