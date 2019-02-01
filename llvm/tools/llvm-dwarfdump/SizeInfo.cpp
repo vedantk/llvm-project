@@ -334,7 +334,11 @@ static void sortCodeGroups(std::vector<CodeGroup *> &Groups,
 static void emitCodeGroupRecords(CodeGroup *CG,
                                  CodeGroupWeighter getCodeGroupWeight,
                                  std::vector<CodeGroup *> &Ancestors,
+                                 SmallPtrSetImpl<CodeGroup *> &Visited,
                                  raw_ostream &OS) {
+  if (!Visited.insert(CG).second)
+    return;
+
   // Sort sub-groups by size and filter out empty groups.
   std::vector<CodeGroup *> SortedGroups(CG->getSubGroups().begin(),
                                         CG->getSubGroups().end());
@@ -358,7 +362,7 @@ static void emitCodeGroupRecords(CodeGroup *CG,
   // Update the list of ancestor code groups and recurse.
   Ancestors.push_back(CG);
   for (CodeGroup *SubGroup : SortedGroups)
-    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, OS);
+    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, Visited, OS);
   Ancestors.pop_back();
 }
 
@@ -384,8 +388,9 @@ static void emitFlamegraphFile(std::vector<CodeGroup *> &Groups,
   raw_ostream &OS = *RawFdStream.get();
 
   std::vector<CodeGroup *> Ancestors;
+  SmallPtrSet<CodeGroup *, 8> Visited;
   for (CodeGroup *CG : Groups)
-    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, OS);
+    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, Visited, OS);
 }
 
 void SizeInfoStats::emitStats(StringRef StatsDir,
