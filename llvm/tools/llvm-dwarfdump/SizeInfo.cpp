@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SizeInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <forward_list>
@@ -50,10 +51,9 @@ void CodeGroup::finalize() {
 
 //=== Parsing DWARF to form code groups -----------------------------------===//
 
-#ifndef NDEBUG
 /// Check whether adding \p Derived as a sub-group of \p Base would induce a
-/// cycle in the inheritance graph.
-static bool detectInheritanceCycle(CodeGroup &Derived, CodeGroup &Base) {
+/// cycle in the graph.
+static bool detectCycle(CodeGroup &Derived, CodeGroup &Base) {
   if (&Derived == &Base)
     return true;
 
@@ -61,13 +61,11 @@ static bool detectInheritanceCycle(CodeGroup &Derived, CodeGroup &Base) {
     return true;
 
   for (CodeGroup *SubGroup : Derived.getSubGroups())
-    if (SubGroup->getKey().getKind() == CodeGroupKind::Class)
-      if (detectInheritanceCycle(*SubGroup, Base))
-        return true;
+    if (detectCycle(*SubGroup, Base))
+      return true;
 
   return false;
 }
-#endif
 
 static bool isClassOrStruct(dwarf::Tag Tag) {
   return Tag == DW_TAG_structure_type || Tag == DW_TAG_class_type;
@@ -133,7 +131,8 @@ void SizeInfoStats::recordInheritanceInfo(DWARFDie ClassDie) {
       continue;
     CodeGroup &ParentClassCG =
         getOrCreateCodeGroup(*ParentClassname, CodeGroupKind::Class);
-    assert(!detectInheritanceCycle(ClassCG, ParentClassCG) && "Cycle!");
+    if (detectCycle(ClassCG, ParentClassCG))
+      return;
     ParentClassCG.addSubGroup(ClassCG);
   }
 }
@@ -147,6 +146,8 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
 
   // Create a record for this inlined subroutine.
   StringRef InlinedFunction = Origin.getName(DINameKind::LinkageName);
+  if (InlinedFunction.empty())
+    return;
   CodeGroup &CG =
       getOrCreateCodeGroup(InlinedFunction, CodeGroupKind::InliningTarget);
   if (auto RangesOrErr = InlinedDie.getAddressRanges()) {
@@ -164,8 +165,12 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
         ParentDie.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
     StringRef ParentInlinedFunction =
         ParentOrigin.getName(DINameKind::LinkageName);
+    if (ParentInlinedFunction.empty())
+      return;
     CodeGroup &ParentCG = getOrCreateCodeGroup(ParentInlinedFunction,
                                                CodeGroupKind::InliningTarget);
+    if (detectCycle(CG, ParentCG))
+      return;
     ParentCG.addSubGroup(CG);
   }
 }
