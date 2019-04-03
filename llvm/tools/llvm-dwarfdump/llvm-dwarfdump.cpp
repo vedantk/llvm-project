@@ -631,7 +631,9 @@ int main(int argc, char **argv) {
       SizeInfoStats SizeStats{StrCtx};
       auto collectSizeInfoHelper =
           std::bind(collectSizeInfo, std::ref(SizeStats), _1, _2, _3, _4);
-      for (const std::string &Filename : Filenames) {
+      for (unsigned I = 0, E = Filenames.size(); I < E; ++I) {
+        const std::string &Filename = Filenames[I];
+        outs() << "Loading " << Filename << " (" << I+1 << " / " << E << ")\n";
         std::vector<std::string> Objects = expandBundle(Filename);
         for (auto Object : Objects)
           handleFile(Object, collectSizeInfoHelper, errs());
