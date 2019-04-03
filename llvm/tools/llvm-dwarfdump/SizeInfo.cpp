@@ -37,7 +37,9 @@ void CodeGroup::finalize() {
   if (Finalized)
     return;
 
-  if (SizeInBytes) {
+  // If this group has a non-zero size, or it has size zero and is an inlining
+  // target, do not visit any sub-groups.
+  if (SizeInBytes || getKey().getKind() == CodeGroupKind::InliningTarget) {
     Finalized = true;
     return;
   }
@@ -169,8 +171,6 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
       return;
     CodeGroup &ParentCG = getOrCreateCodeGroup(ParentInlinedFunction,
                                                CodeGroupKind::InliningTarget);
-    if (detectCycle(CG, ParentCG))
-      return;
     ParentCG.addSubGroup(CG);
   }
 }

@@ -97,6 +97,8 @@ public:
   uint64_t getSize() const;
 
   /// Register a sub-group of this code group. This must not induce a cycle.
+  /// As a special case, an exception is made for inlining (i.e. inlining of
+  /// mutual recursion can be modeled).
   void addSubGroup(CodeGroup &CG);
 
   const SmallPtrSetImpl<CodeGroup *> &getSubGroups() const { return SubGroups; }
