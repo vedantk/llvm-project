@@ -15,6 +15,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <atomic>
+#include <mutex>
 #include <vector>
 
 using namespace llvm;
@@ -85,10 +87,18 @@ class CodeGroup {
 
   bool Finalized = false;
 
+  friend class SizeInfoStats;
+
 public:
   CodeGroup(CodeGroupKey Key) : Key(Key) {}
 
   CodeGroupKey getKey() const { return Key; }
+
+  CodeGroupKind getKind() const { return Key.getKind(); }
+
+  /// Set the size of this code group to the max of its current size, and the
+  /// size between \p LowPC and \p HighPC.
+  void updatePCRange(uint64_t LowPC, uint64_t HighPC);
 
   /// Attribute code size between \p LowPC and \p HighPC to this code group.
   void addPCRange(uint64_t LowPC, uint64_t HighPC);
@@ -110,6 +120,8 @@ public:
 /// A shared context for string data. This is used to intern StringRefs backed
 /// by transient DWARF contexts. It also enables cheap comparison of StringRefs.
 struct StringContext {
+  std::atomic_flag Lock;
+
   BumpPtrAllocator Alloc;
 
   UniqueStringSaver Strings{Alloc};
@@ -119,7 +131,9 @@ using CodeGroupWeighter = const std::function<int64_t(CodeGroup &)> &;
 
 /// A collection of statistics about code groups within a program.
 class SizeInfoStats {
-  StringContext &StrCtx;
+  std::unique_ptr<std::mutex> Lock;
+
+  StringContext *StrCtx;
 
   DenseMap<CodeGroupKey, std::unique_ptr<CodeGroup>> CodeGroups;
 
@@ -128,10 +142,24 @@ class SizeInfoStats {
   bool Finalized = false;
 
 public:
-  SizeInfoStats(StringContext &StrCtx) : StrCtx(StrCtx) {}
+  SizeInfoStats(StringContext &StrCtx)
+      : Lock(make_unique<std::mutex>()), StrCtx(&StrCtx) {}
+
+  SizeInfoStats(const SizeInfoStats &) = delete;
+  SizeInfoStats &operator=(const SizeInfoStats &) = delete;
+
+  SizeInfoStats(SizeInfoStats &&) = default;
+  SizeInfoStats &operator=(SizeInfoStats &&) = default;
+
+  std::unique_lock<std::mutex> lock() {
+    return std::unique_lock<std::mutex>(*Lock.get());
+  }
 
   /// Collect size information for code groups represented within \p CUDie.
   void collectSizeInfoInCU(DWARFDie CUDie);
+
+  /// Incorporate size information from an unfinalized collection.
+  void incorporate(SizeInfoStats &Other);
 
   /// Finalize code groups.
   void finalize();

@@ -28,6 +28,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -626,20 +628,52 @@ int main(int argc, char **argv) {
   if (SizeInfoCmd) {
     // Define a helper which collects size info from the DWARF within a bundle.
     StringContext StrCtx;
+    unsigned Threads = heavyweight_hardware_concurrency();
+    ThreadPool Pool(Threads);
     auto getSizeStats = [&](ArrayRef<std::string> Filenames) -> SizeInfoStats {
-      using namespace std::placeholders;
-      SizeInfoStats SizeStats{StrCtx};
-      auto collectSizeInfoHelper =
-          std::bind(collectSizeInfo, std::ref(SizeStats), _1, _2, _3, _4);
+      std::vector<SizeInfoStats> StatsList;
+      for (unsigned I = 0; I < Threads; ++I)
+        StatsList.emplace_back(StrCtx);
+
       for (unsigned I = 0, E = Filenames.size(); I < E; ++I) {
         const std::string &Filename = Filenames[I];
-        outs() << "Loading " << Filename << " (" << I+1 << " / " << E << ")\n";
+
+        using namespace std::placeholders;
+        auto collectSizeInfoHelper = std::bind(
+            collectSizeInfo, std::ref(StatsList[I % Threads]), _1, _2, _3, _4);
+
         std::vector<std::string> Objects = expandBundle(Filename);
-        for (auto Object : Objects)
-          handleFile(Object, collectSizeInfoHelper, errs());
+        for (auto Object : Objects) {
+          auto asyncHelper = [=] {
+            handleFile(Object, collectSizeInfoHelper, errs());
+          };
+          Pool.async(asyncHelper);
+        }
       }
-      SizeStats.finalize();
-      return SizeStats;
+      Pool.wait();
+      outs() << "\n";
+
+      // Merge the stats together (~ lg(Threads) serial steps).
+      unsigned Mid = StatsList.size() / 2;
+      unsigned End = StatsList.size();
+      assert(Mid > 0 && "Expected more than one context");
+      do {
+        auto asyncHelper = [=](SizeInfoStats *LHS, SizeInfoStats *RHS) {
+          LHS->incorporate(*RHS);
+        };
+        for (unsigned I = 0; I < Mid; ++I)
+          Pool.async(asyncHelper, &StatsList[I], &StatsList[I + Mid]);
+        Pool.wait();
+        if (End & 1) {
+          Pool.async(asyncHelper, &StatsList[0], &StatsList[End - 1]);
+          Pool.wait();
+        }
+        End = Mid;
+        Mid /= 2;
+      } while (Mid > 0);
+
+      StatsList[0].finalize();
+      return std::move(StatsList[0]);
     };
 
     std::vector<std::string> BaselineFiles =

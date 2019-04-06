@@ -17,6 +17,12 @@ using namespace dwarf;
 
 //=== Basic code group representation -------------------------------------===//
 
+void CodeGroup::updatePCRange(uint64_t LowPC, uint64_t HighPC) {
+  assert(!Finalized && "Cannot add PC range");
+  assert(LowPC <= HighPC && "Invalid PC range");
+  SizeInBytes = std::max(SizeInBytes, HighPC - LowPC);
+}
+
 void CodeGroup::addPCRange(uint64_t LowPC, uint64_t HighPC) {
   assert(!Finalized && "Cannot add PC range");
   assert(LowPC <= HighPC && "Invalid PC range");
@@ -39,7 +45,7 @@ void CodeGroup::finalize() {
 
   // If this group has a non-zero size, or it has size zero and is an inlining
   // target, do not visit any sub-groups.
-  if (SizeInBytes || getKey().getKind() == CodeGroupKind::InliningTarget) {
+  if (SizeInBytes || getKind() == CodeGroupKind::InliningTarget) {
     Finalized = true;
     return;
   }
@@ -53,6 +59,7 @@ void CodeGroup::finalize() {
 
 //=== Parsing DWARF to form code groups -----------------------------------===//
 
+#ifndef NDEBUG
 /// Check whether adding \p Derived as a sub-group of \p Base would induce a
 /// cycle in the graph.
 static bool detectCycle(CodeGroup &Derived, CodeGroup &Base) {
@@ -68,6 +75,7 @@ static bool detectCycle(CodeGroup &Derived, CodeGroup &Base) {
 
   return false;
 }
+#endif
 
 static bool isClassOrStruct(dwarf::Tag Tag) {
   return Tag == DW_TAG_structure_type || Tag == DW_TAG_class_type;
@@ -133,8 +141,7 @@ void SizeInfoStats::recordInheritanceInfo(DWARFDie ClassDie) {
       continue;
     CodeGroup &ParentClassCG =
         getOrCreateCodeGroup(*ParentClassname, CodeGroupKind::Class);
-    if (detectCycle(ClassCG, ParentClassCG))
-      return;
+    assert(!detectCycle(ClassCG, ParentClassCG));
     ParentClassCG.addSubGroup(ClassCG);
   }
 }
@@ -147,11 +154,11 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
   assert(Origin && "DW_TAG_inlined_subroutine without origin");
 
   // Create a record for this inlined subroutine.
-  StringRef InlinedFunction = Origin.getName(DINameKind::LinkageName);
-  if (InlinedFunction.empty())
+  auto InlinedFunction = getQualifiedName(Origin);
+  if (!InlinedFunction)
     return;
   CodeGroup &CG =
-      getOrCreateCodeGroup(InlinedFunction, CodeGroupKind::InliningTarget);
+      getOrCreateCodeGroup(*InlinedFunction, CodeGroupKind::InliningTarget);
   if (auto RangesOrErr = InlinedDie.getAddressRanges()) {
     for (DWARFAddressRange Range : RangesOrErr.get())
       CG.addPCRange(Range.LowPC, Range.HighPC);
@@ -165,11 +172,10 @@ void SizeInfoStats::recordInlinedInstance(DWARFDie InlinedDie,
   if (ParentDie.getTag() == DW_TAG_inlined_subroutine) {
     DWARFDie ParentOrigin =
         ParentDie.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
-    StringRef ParentInlinedFunction =
-        ParentOrigin.getName(DINameKind::LinkageName);
-    if (ParentInlinedFunction.empty())
+    auto ParentInlinedFunction = getQualifiedName(ParentOrigin);
+    if (!ParentInlinedFunction)
       return;
-    CodeGroup &ParentCG = getOrCreateCodeGroup(ParentInlinedFunction,
+    CodeGroup &ParentCG = getOrCreateCodeGroup(*ParentInlinedFunction,
                                                CodeGroupKind::InliningTarget);
     ParentCG.addSubGroup(CG);
   }
@@ -242,7 +248,7 @@ void SizeInfoStats::collectSizeInfoInFunction(DWARFDie FuncDie,
   CodeGroup &FuncCG = getOrCreateCodeGroup(Funcname, CodeGroupKind::Function);
   if (FoundPCRange) {
     // Attribute the function's size to its defining file.
-    FuncCG.addPCRange(LowPC, HighPC);
+    FuncCG.updatePCRange(LowPC, HighPC);
     FileCG.addSubGroup(FuncCG);
   }
 
@@ -270,10 +276,47 @@ void SizeInfoStats::collectSizeInfoInDIE(DWARFDie ParentDie,
 }
 
 void SizeInfoStats::collectSizeInfoInCU(DWARFDie CUDie) {
+  std::unique_lock<std::mutex> Guard = lock();
   QualifiedNameCache.clear();
   StringRef Filename = CUDie.getName(DINameKind::LinkageName);
   CodeGroup &FileCG = getOrCreateCodeGroup(Filename, CodeGroupKind::File);
   collectSizeInfoInDIE(CUDie, FileCG);
+}
+
+void SizeInfoStats::incorporate(SizeInfoStats &Other) {
+  assert(!Other.Finalized && "Cannot incorporate");
+
+  std::vector<std::unique_ptr<CodeGroup>> SharedGroups;
+  for (auto &Entry : Other.CodeGroups) {
+    // The other group's key is new. Map that key to the new group. Any new
+    // sub-groups will be fixed up later.
+    CodeGroup *OtherGroup = Entry.second.get();
+    std::unique_ptr<CodeGroup> &CG = CodeGroups[OtherGroup->getKey()];
+    if (!CG) {
+      CG = std::move(Entry.second);
+      continue;
+    }
+
+    // Set the size of shared groups to the maximum known size.
+    CG->updatePCRange(0, OtherGroup->SizeInBytes);
+
+    // Add all the sub-groups for shared groups. There may be some duplication
+    // here, but it will be fixed up later.
+    for (CodeGroup *OtherSubGroup : OtherGroup->getSubGroups())
+      CG->addSubGroup(*OtherSubGroup);
+  }
+
+  // Fix up all sub-groups. I.e., replace groups owned by \p Other with the
+  // newly-created/updated groups owned by \p this.
+  for (auto &Entry : CodeGroups) {
+    CodeGroup *CG = Entry.second.get();
+    SmallDenseSet<CodeGroupKey> Keys;
+    for (CodeGroup *SubGroup : CG->getSubGroups())
+      Keys.insert(SubGroup->getKey());
+    CG->SubGroups.clear();
+    for (CodeGroupKey Key : Keys)
+      CG->addSubGroup(*CodeGroups[Key].get());
+  }
 }
 
 void SizeInfoStats::finalize() {
@@ -283,7 +326,14 @@ void SizeInfoStats::finalize() {
   Finalized = true;
 }
 
-StringRef SizeInfoStats::intern(StringRef S) { return StrCtx.Strings.save(S); }
+StringRef SizeInfoStats::intern(StringRef S) {
+  StringRef Result;
+  while (StrCtx->Lock.test_and_set(std::memory_order_acquire))
+    ;
+  Result = StrCtx->Strings.save(S);
+  StrCtx->Lock.clear(std::memory_order_release);
+  return Result;
+}
 
 CodeGroup &SizeInfoStats::getOrCreateCodeGroup(StringRef Name,
                                                CodeGroupKind Kind) {
@@ -301,6 +351,7 @@ bool collectSizeInfo(SizeInfoStats &SizeStats, ObjectFile &,
   for (const auto &CU : DICtx.compile_units())
     if (DWARFDie CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false))
       SizeStats.collectSizeInfoInCU(CUDie);
+  outs() << ".";
   return true;
 }
 
@@ -340,22 +391,31 @@ static void emitCodeGroupRecords(CodeGroup *CG,
                                  CodeGroupWeighter getCodeGroupWeight,
                                  std::vector<CodeGroup *> &Ancestors,
                                  SmallPtrSetImpl<CodeGroup *> &Visited,
-                                 raw_ostream &OS) {
+                                 bool IsDiff, raw_ostream &OS) {
   if (!Visited.insert(CG).second)
     return;
 
-  // Sort sub-groups by size and filter out empty groups.
-  std::vector<CodeGroup *> SortedGroups(CG->getSubGroups().begin(),
-                                        CG->getSubGroups().end());
-  sortCodeGroups(SortedGroups, getCodeGroupWeight);
-  while (!SortedGroups.empty() && getCodeGroupWeight(*SortedGroups.back()) <= 0)
-    SortedGroups.pop_back();
+  // For classes and inlining targets, diffing is not meaningful for sub-groups.
+  bool HideSubGroups = (CG->getKind() == CodeGroupKind::InliningTarget ||
+                        CG->getKind() == CodeGroupKind::Class) &&
+                       IsDiff;
 
-  if (SortedGroups.empty()) {
+  std::vector<CodeGroup *> SortedSubGroups;
+  if (!HideSubGroups) {
+    // Sort sub-groups by size and filter out empty groups.
+    SortedSubGroups.assign(CG->getSubGroups().begin(),
+                           CG->getSubGroups().end());
+    sortCodeGroups(SortedSubGroups, getCodeGroupWeight);
+    while (!SortedSubGroups.empty() &&
+           getCodeGroupWeight(*SortedSubGroups.back()) <= 0)
+      SortedSubGroups.pop_back();
+  }
+
+  if (SortedSubGroups.empty()) {
     // Emit a semicolon-separated path from the root node to this leaf.
     for (CodeGroup *Ancestor : Ancestors) {
       Ancestor->getKey().dump(OS);
-      if (Ancestor->getKey().getKind() == CodeGroupKind::InliningTarget)
+      if (Ancestor->getKind() == CodeGroupKind::InliningTarget)
         OS << " " << Ancestor->getSize();
       OS << ";";
     }
@@ -366,8 +426,9 @@ static void emitCodeGroupRecords(CodeGroup *CG,
 
   // Update the list of ancestor code groups and recurse.
   Ancestors.push_back(CG);
-  for (CodeGroup *SubGroup : SortedGroups)
-    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, Visited, OS);
+  for (CodeGroup *SubGroup : SortedSubGroups)
+    emitCodeGroupRecords(SubGroup, getCodeGroupWeight, Ancestors, Visited,
+                         IsDiff, OS);
   Ancestors.pop_back();
 }
 
@@ -395,7 +456,8 @@ static void emitFlamegraphFile(std::vector<CodeGroup *> &Groups,
   std::vector<CodeGroup *> Ancestors;
   SmallPtrSet<CodeGroup *, 8> Visited;
   for (CodeGroup *CG : Groups)
-    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, Visited, OS);
+    emitCodeGroupRecords(CG, getCodeGroupWeight, Ancestors, Visited, IsDiff,
+                         OS);
 }
 
 void SizeInfoStats::emitStats(StringRef StatsDir,
@@ -416,7 +478,7 @@ void SizeInfoStats::emitStats(StringRef StatsDir,
     if (getCodeGroupWeight(*CG) <= 0)
       continue;
 
-    switch (CG->getKey().getKind()) {
+    switch (CG->getKind()) {
     case CodeGroupKind::File:
       Files.push_back(CG);
       continue;
@@ -462,10 +524,9 @@ void SizeInfoStats::emitDiffstats(SizeInfoStats &Baseline,
     int64_t Target = int64_t(CG.getSize());
     auto BaselineIt = Baseline.CodeGroups.find(CG.getKey());
 
-    // This code group doesn't exist in the baseline. Report it as pure code
-    // growth.
+    // This code group doesn't exist in the baseline.
     if (BaselineIt == Baseline.CodeGroups.end())
-      return Target;
+      return 0LL;
 
     // Report the change in code size. (Non-positive changes are ignored.)
     int64_t Baseline = int64_t(BaselineIt->second.get()->getSize());
