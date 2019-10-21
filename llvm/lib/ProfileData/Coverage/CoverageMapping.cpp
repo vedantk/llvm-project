@@ -804,6 +804,10 @@ static std::string getCoverageMapErrString(coveragemap_error Err) {
     return "Truncated coverage data";
   case coveragemap_error::malformed:
     return "Malformed coverage data";
+  case coveragemap_error::compression_failed:
+    return "Failed to compress coverage data (zlib)";
+  case coveragemap_error::decompression_failed:
+    return "Failed to decompress coverage data (zlib)";
   }
   llvm_unreachable("A value of coveragemap_error has no message.");
 }
