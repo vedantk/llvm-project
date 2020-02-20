@@ -50,16 +50,19 @@ public:
 
 private:
   // Index of Element in terms of where first bit starts.
-  unsigned ElementIndex;
+  uint64_t ElementIndex;
   BitWord Bits[BITWORDS_PER_ELEMENT];
 
+  // Helper that zero-extends \p Bit.
+  static uint64_t bit(unsigned Bit) { return Bit; }
+
   SparseBitVectorElement() {
-    ElementIndex = ~0U;
+    ElementIndex = ~bit(0);
     memset(&Bits[0], 0, sizeof (BitWord) * BITWORDS_PER_ELEMENT);
   }
 
 public:
-  explicit SparseBitVectorElement(unsigned Idx) {
+  explicit SparseBitVectorElement(uint64_t Idx) {
     ElementIndex = Idx;
     memset(&Bits[0], 0, sizeof (BitWord) * BITWORDS_PER_ELEMENT);
   }
@@ -68,7 +71,7 @@ public:
   bool operator==(const SparseBitVectorElement &RHS) const {
     if (ElementIndex != RHS.ElementIndex)
       return false;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != RHS.Bits[i])
         return false;
     return true;
@@ -79,27 +82,27 @@ public:
   }
 
   // Return the bits that make up word Idx in our element.
-  BitWord word(unsigned Idx) const {
+  BitWord word(uint64_t Idx) const {
     assert(Idx < BITWORDS_PER_ELEMENT);
     return Bits[Idx];
   }
 
-  unsigned index() const {
+  uint64_t index() const {
     return ElementIndex;
   }
 
   bool empty() const {
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i])
         return false;
     return true;
   }
 
-  void set(unsigned Idx) {
-    Bits[Idx / BITWORD_SIZE] |= 1L << (Idx % BITWORD_SIZE);
+  void set(uint64_t Idx) {
+    Bits[Idx / BITWORD_SIZE] |= bit(1) << (Idx % BITWORD_SIZE);
   }
 
-  bool test_and_set(unsigned Idx) {
+  bool test_and_set(uint64_t Idx) {
     bool old = test(Idx);
     if (!old) {
       set(Idx);
@@ -108,33 +111,33 @@ public:
     return false;
   }
 
-  void reset(unsigned Idx) {
-    Bits[Idx / BITWORD_SIZE] &= ~(1L << (Idx % BITWORD_SIZE));
+  void reset(uint64_t Idx) {
+    Bits[Idx / BITWORD_SIZE] &= ~(bit(1) << (Idx % BITWORD_SIZE));
   }
 
-  bool test(unsigned Idx) const {
-    return Bits[Idx / BITWORD_SIZE] & (1L << (Idx % BITWORD_SIZE));
+  bool test(uint64_t Idx) const {
+    return Bits[Idx / BITWORD_SIZE] & (bit(1) << (Idx % BITWORD_SIZE));
   }
 
   size_type count() const {
-    unsigned NumBits = 0;
+    size_type NumBits = 0;
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       NumBits += countPopulation(Bits[i]);
     return NumBits;
   }
 
   /// find_first - Returns the index of the first set bit.
-  int find_first() const {
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i)
+  int64_t find_first() const {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != 0)
         return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
     llvm_unreachable("Illegal empty element");
   }
 
   /// find_last - Returns the index of the last set bit.
-  int find_last() const {
-    for (unsigned I = 0; I < BITWORDS_PER_ELEMENT; ++I) {
-      unsigned Idx = BITWORDS_PER_ELEMENT - I - 1;
+  int64_t find_last() const {
+    for (uint64_t I = 0; I < BITWORDS_PER_ELEMENT; ++I) {
+      uint64_t Idx = BITWORDS_PER_ELEMENT - I - 1;
       if (Bits[Idx] != 0)
         return Idx * BITWORD_SIZE + BITWORD_SIZE -
                countLeadingZeros(Bits[Idx]) - 1;
@@ -144,24 +147,24 @@ public:
 
   /// find_next - Returns the index of the next set bit starting from the
   /// "Curr" bit. Returns -1 if the next set bit is not found.
-  int find_next(unsigned Curr) const {
+  int64_t find_next(uint64_t Curr) const {
     if (Curr >= BITS_PER_ELEMENT)
       return -1;
 
-    unsigned WordPos = Curr / BITWORD_SIZE;
-    unsigned BitPos = Curr % BITWORD_SIZE;
+    uint64_t WordPos = Curr / BITWORD_SIZE;
+    uint64_t BitPos = Curr % BITWORD_SIZE;
     BitWord Copy = Bits[WordPos];
     assert(WordPos <= BITWORDS_PER_ELEMENT
            && "Word Position outside of element");
 
     // Mask off previous bits.
-    Copy &= ~0UL << BitPos;
+    Copy &= ~bit(0) << BitPos;
 
     if (Copy != 0)
       return WordPos * BITWORD_SIZE + countTrailingZeros(Copy);
 
     // Check subsequent words.
-    for (unsigned i = WordPos+1; i < BITWORDS_PER_ELEMENT; ++i)
+    for (uint64_t i = WordPos+1; i < BITWORDS_PER_ELEMENT; ++i)
       if (Bits[i] != 0)
         return i * BITWORD_SIZE + countTrailingZeros(Bits[i]);
     return -1;
@@ -170,7 +173,7 @@ public:
   // Union this element with RHS and return true if this one changed.
   bool unionWith(const SparseBitVectorElement &RHS) {
     bool changed = false;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
       BitWord old = changed ? 0 : Bits[i];
 
       Bits[i] |= RHS.Bits[i];
@@ -182,7 +185,7 @@ public:
 
   // Return true if we have any bits in common with RHS
   bool intersects(const SparseBitVectorElement &RHS) const {
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
       if (RHS.Bits[i] & Bits[i])
         return true;
     }
@@ -197,7 +200,7 @@ public:
     bool allzero = true;
 
     BecameZero = false;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
       BitWord old = changed ? 0 : Bits[i];
 
       Bits[i] &= RHS.Bits[i];
@@ -220,7 +223,7 @@ public:
     bool allzero = true;
 
     BecameZero = false;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
       BitWord old = changed ? 0 : Bits[i];
 
       Bits[i] &= ~RHS.Bits[i];
@@ -242,7 +245,7 @@ public:
     bool allzero = true;
 
     BecameZero = false;
-    for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
+    for (uint64_t i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
       Bits[i] = RHS1.Bits[i] & ~RHS2.Bits[i];
       if (Bits[i] != 0)
         allzero = false;
@@ -268,7 +271,7 @@ class SparseBitVector {
 
   // This is like std::lower_bound, except we do linear searching from the
   // current position.
-  ElementListIter FindLowerBoundImpl(unsigned ElementIndex) const {
+  ElementListIter FindLowerBoundImpl(uint64_t ElementIndex) const {
 
     // We cache a non-const iterator so we're forced to resort to const_cast to
     // get the begin/end in the case where 'this' is const. To avoid duplication
@@ -306,10 +309,10 @@ class SparseBitVector {
     CurrElementIter = ElementIter;
     return ElementIter;
   }
-  ElementListConstIter FindLowerBoundConst(unsigned ElementIndex) const {
+  ElementListConstIter FindLowerBoundConst(uint64_t ElementIndex) const {
     return FindLowerBoundImpl(ElementIndex);
   }
-  ElementListIter FindLowerBound(unsigned ElementIndex) {
+  ElementListIter FindLowerBound(uint64_t ElementIndex) {
     return FindLowerBoundImpl(ElementIndex);
   }
 
@@ -325,13 +328,16 @@ class SparseBitVector {
     ElementListConstIter Iter;
 
     // Current bit number inside of our bitmap.
-    unsigned BitNumber;
+    uint64_t BitNumber;
 
     // Current word number inside of our element.
-    unsigned WordNumber;
+    uint64_t WordNumber;
 
     // Current bits from the element.
     typename SparseBitVectorElement<ElementSize>::BitWord Bits;
+
+    // Helper that zero-extends \p Bit.
+    static uint64_t bit(unsigned Bit) { return Bit; }
 
     // Move our iterator to the first non-zero bit in the bitmap.
     void AdvanceToFirstNonZero() {
@@ -343,7 +349,7 @@ class SparseBitVector {
       }
       Iter = BitVector->Elements.begin();
       BitNumber = Iter->index() * ElementSize;
-      unsigned BitPos = Iter->find_first();
+      uint64_t BitPos = Iter->find_first();
       BitNumber += BitPos;
       WordNumber = (BitNumber % ElementSize) / BITWORD_SIZE;
       Bits = Iter->word(WordNumber);
@@ -362,7 +368,7 @@ class SparseBitVector {
 
       // See if we ran out of Bits in this word.
       if (!Bits) {
-        int NextSetBitNumber = Iter->find_next(BitNumber % ElementSize) ;
+        int64_t NextSetBitNumber = Iter->find_next(BitNumber % ElementSize) ;
         // If we ran out of set bits in this element, move to next element.
         if (NextSetBitNumber == -1 || (BitNumber % ElementSize == 0)) {
           ++Iter;
@@ -398,7 +404,7 @@ class SparseBitVector {
       Iter = BitVector->Elements.begin();
       BitNumber = 0;
       Bits = 0;
-      WordNumber = ~0;
+      WordNumber = ~bit(0);
       AtEnd = end;
       AdvanceToFirstNonZero();
     }
@@ -419,7 +425,7 @@ class SparseBitVector {
     }
 
     // Return the current set bit number.
-    unsigned operator*() const {
+    uint64_t operator*() const {
       return BitNumber;
     }
 
@@ -468,11 +474,12 @@ public:
   }
 
   // Test, Reset, and Set a bit in the bitmap.
-  bool test(unsigned Idx) const {
+  bool test(uint64_t Idx) const {
+    assert(static_cast<int64_t>(Idx) != -1 && "Invalid index");
     if (Elements.empty())
       return false;
 
-    unsigned ElementIndex = Idx / ElementSize;
+    uint64_t ElementIndex = Idx / ElementSize;
     ElementListConstIter ElementIter = FindLowerBoundConst(ElementIndex);
 
     // If we can't find an element that is supposed to contain this bit, there
@@ -483,11 +490,12 @@ public:
     return ElementIter->test(Idx % ElementSize);
   }
 
-  void reset(unsigned Idx) {
+  void reset(uint64_t Idx) {
+    assert(static_cast<int64_t>(Idx) != -1 && "Invalid index");
     if (Elements.empty())
       return;
 
-    unsigned ElementIndex = Idx / ElementSize;
+    uint64_t ElementIndex = Idx / ElementSize;
     ElementListIter ElementIter = FindLowerBound(ElementIndex);
 
     // If we can't find an element that is supposed to contain this bit, there
@@ -504,8 +512,9 @@ public:
     }
   }
 
-  void set(unsigned Idx) {
-    unsigned ElementIndex = Idx / ElementSize;
+  void set(uint64_t Idx) {
+    assert(static_cast<int64_t>(Idx) != -1 && "Invalid index");
+    uint64_t ElementIndex = Idx / ElementSize;
     ElementListIter ElementIter;
     if (Elements.empty()) {
       ElementIter = Elements.emplace(Elements.end(), ElementIndex);
@@ -528,7 +537,7 @@ public:
     ElementIter->set(Idx % ElementSize);
   }
 
-  bool test_and_set(unsigned Idx) {
+  bool test_and_set(uint64_t Idx) {
     bool old = test(Idx);
     if (!old) {
       set(Idx);
@@ -776,7 +785,7 @@ public:
   }
 
   // Return the first set bit in the bitmap.  Return -1 if no bits are set.
-  int find_first() const {
+  int64_t find_first() const {
     if (Elements.empty())
       return -1;
     const SparseBitVectorElement<ElementSize> &First = *(Elements.begin());
@@ -784,7 +793,7 @@ public:
   }
 
   // Return the last set bit in the bitmap.  Return -1 if no bits are set.
-  int find_last() const {
+  int64_t find_last() const {
     if (Elements.empty())
       return -1;
     const SparseBitVectorElement<ElementSize> &Last = *(Elements.rbegin());

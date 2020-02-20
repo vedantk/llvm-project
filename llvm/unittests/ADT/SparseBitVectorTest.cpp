@@ -31,6 +31,15 @@ TEST(SparseBitVectorTest, TrivialOperation) {
   Vec.clear();
   EXPECT_FALSE(Vec.test(17));
 
+  uint64_t BigNum = uint64_t(1) << 32;
+  for (unsigned LShift = 0; LShift <= 31; ++LShift) {
+    uint64_t BigShifted = BigNum << LShift;
+    Vec.set(BigShifted);
+    EXPECT_TRUE(Vec.test(BigShifted));
+    EXPECT_TRUE(Vec.test_and_set(BigShifted + 1));
+    EXPECT_FALSE(Vec.test_and_set(BigShifted + 1));
+  }
+
   Vec.set(5);
   const SparseBitVector<> ConstVec = Vec;
   EXPECT_TRUE(ConstVec.test(5));
