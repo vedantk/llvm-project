@@ -396,18 +396,20 @@ class SparseBitVector {
       }
     }
 
-  public:
-    SparseBitVectorIterator() = default;
+    friend class SparseBitVector;
 
     SparseBitVectorIterator(const SparseBitVector<ElementSize> *RHS,
-                            bool end = false):BitVector(RHS) {
-      Iter = BitVector->Elements.begin();
+                            ElementListConstIter CurPos, bool end)
+        : BitVector(RHS), Iter(CurPos) {
       BitNumber = 0;
       Bits = 0;
       WordNumber = ~bit(0);
       AtEnd = end;
       AdvanceToFirstNonZero();
     }
+
+  public:
+    SparseBitVectorIterator() = default;
 
     // Preincrement.
     inline SparseBitVectorIterator& operator++() {
@@ -800,6 +802,23 @@ public:
     return (Last.index() * ElementSize) + Last.find_last();
   }
 
+  /// Return an iterator pointing to the first bit set at or after \p Idx, or
+  /// end() if no such bit exists. Note that the iterator may not point to a
+  /// bit before \p Idx. This is like std::lower_bound.
+  iterator find(uint64_t Idx) const {
+    if (Elements.empty())
+      return end();
+
+    uint64_t ElementIndex = Idx / ElementSize;
+    ElementListConstIter ElementIter = FindLowerBoundConst(ElementIndex);
+    if (ElementIter == Elements.end())
+      return end();
+    auto It = iterator(this, ElementIter, false);
+    while (*It < Idx)
+      ++It;
+    return It;
+  }
+
   // Return true if the SparseBitVector is empty
   bool empty() const {
     return Elements.empty();
@@ -816,11 +835,11 @@ public:
   }
 
   iterator begin() const {
-    return iterator(this);
+    return iterator(this, Elements.begin(), false);
   }
 
   iterator end() const {
-    return iterator(this, true);
+    return iterator(this, Elements.begin(), true);
   }
 };
 

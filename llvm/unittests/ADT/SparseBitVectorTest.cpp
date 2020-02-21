@@ -195,4 +195,22 @@ TEST(SparseBitVectorTest, Find) {
 
   Vec.clear();
 }
+
+TEST(SparseBitVectorTest, FindLowerBound) {
+  SparseBitVector<> Vec;
+  uint64_t BigNum1 = uint64_t(1) << 32;
+  uint64_t BigNum2 = (uint64_t(1) << 33) + 1;
+  EXPECT_EQ(Vec.find(BigNum1), Vec.end());
+  Vec.set(BigNum1);
+  auto Find1 = Vec.find(BigNum1);
+  EXPECT_EQ(*Find1, BigNum1);
+  Vec.set(BigNum2);
+  auto Find2 = Vec.find(BigNum1);
+  EXPECT_EQ(*Find2, BigNum1);
+  auto Find3 = Vec.find(BigNum2);
+  EXPECT_EQ(*Find3, BigNum2);
+  Vec.reset(BigNum1);
+  auto Find4 = Vec.find(BigNum1);
+  EXPECT_EQ(*Find4, BigNum2);
+}
 }
