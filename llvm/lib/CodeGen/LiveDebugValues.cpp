@@ -432,15 +432,26 @@ private:
   };
 
   class VarLocMap {
-    UniqueVector<VarLoc> VarLocs;
+    std::map<VarLoc, uint32_t> Var2Index;
+    SmallDenseMap<uint32_t, std::vector<VarLoc>> Loc2Vars;
 
   public:
     LocIndex insert(const VarLoc &VL) {
-      uint32_t Index = VarLocs.insert(VL);
-      return {0, Index};
+      uint32_t Location = VL.isDescribedByReg();
+      uint32_t &Index = Var2Index[VL];
+      if (!Index) {
+        auto &Vars = Loc2Vars[Location];
+        Vars.push_back(VL);
+        Index = Vars.size();
+      }
+      return {Location, Index - 1};
     }
 
-    const VarLoc &operator[](LocIndex ID) const { return VarLocs[ID.Index]; }
+    const VarLoc &operator[](LocIndex ID) const {
+      auto LocIt = Loc2Vars.find(ID.Location);
+      assert(LocIt != Loc2Vars.end() && "Location not tracked");
+      return LocIt->second[ID.Index];
+    }
   };
 
   using VarLocSet = SparseBitVector<>;
@@ -522,6 +533,15 @@ private:
       return VarLocs.empty();
     }
   };
+
+  /// Collect all VarLoc IDs from \p CollectFrom for VarLocs which are located
+  /// in \p Reg. Insert collected IDs in \p Collected.
+  void collectIDsForReg(VarLocSet &Collected, uint32_t Reg,
+                        const VarLocSet &CollectFrom) const;
+
+  /// Get the registers which are used by VarLocs tracked by \p CollectFrom.
+  std::vector<uint32_t> getUsedRegs(const VarLocSet &CollectFrom) const;
+
 
   /// Tests whether this instruction is a spill to a stack location.
   bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
@@ -707,6 +727,47 @@ LiveDebugValues::OpenRangesSet::getEntryValueBackup(DebugVariable Var) {
     return It->second;
 
   return llvm::None;
+}
+
+void LiveDebugValues::collectIDsForReg(VarLocSet &Collected, uint32_t Reg,
+                                       const VarLocSet &CollectFrom) const {
+  // The half-open range [FirstIndexForReg, FirstInvalidIndex) contains all
+  // possible VarLoc IDs for VarLocs which live in Reg.
+  uint64_t FirstIndexForReg = LocIndex(Reg, 0).getAsRawInteger();
+  uint64_t FirstInvalidIndex = LocIndex(Reg + 1, 0).getAsRawInteger();
+  // Iterate through that half-open interval and collect all the set IDs.
+  for (auto It = CollectFrom.find(FirstIndexForReg), End = CollectFrom.end();
+       It != End && *It < FirstInvalidIndex; ++It)
+    Collected.set(*It);
+}
+
+std::vector<uint32_t>
+LiveDebugValues::getUsedRegs(const VarLocSet &CollectFrom) const {
+  std::vector<uint32_t> UsedRegs;
+  // All register-based VarLocs are assigned indices greater than or equal to
+  // FirstRegIndex.
+  uint64_t FirstRegIndex = LocIndex(1, 0).getAsRawInteger();
+  for (auto It = CollectFrom.find(FirstRegIndex), End = CollectFrom.end();
+       It != End;) {
+    // We found a VarLoc ID for a VarLoc that lives in a register. Figure out
+    // which register and add it to UsedRegs.
+    uint32_t FoundReg = LocIndex::fromRawInteger(*It).Location;
+    assert((UsedRegs.empty() || FoundReg != UsedRegs.back()) &&
+           "Duplicate used reg");
+    UsedRegs.push_back(FoundReg);
+
+    // Skip to the next /set/ register. Note that this finds a lower bound, so
+    // even if there aren't any VarLocs living in `FoundReg+1`, we're still
+    // guaranteed to move on to the next register (or to end()).
+    //
+    // Note also that the underlying SparseBitVector caches the last accessed
+    // iterator, so we're expecting a fast search.
+    uint64_t NextRegIndex = LocIndex(FoundReg + 1, 0).getAsRawInteger();
+    auto OldIt = It;
+    It = CollectFrom.find(NextRegIndex);
+    assert(OldIt != It && "No forward progress");
+  }
+  return UsedRegs;
 }
 
 //===----------------------------------------------------------------------===//
@@ -969,55 +1030,50 @@ void LiveDebugValues::transferRegisterDef(
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-  SparseBitVector<> KillSet;
+
+  // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
-  // prevents fallback to std::set::count() operations. As often as possible, we
-  // want a linear scan here.
-  SmallSet<unsigned, 32> DeadRegs;
-  SmallVector<const uint32_t *, 4> DeadRegMasks;
+  // prevents fallback to std::set::count() operations.
+  SmallSet<uint32_t, 32> DeadRegs;
+  SmallVector<const uint32_t *, 4> RegMasks;
   for (const MachineOperand &MO : MI.operands()) {
-    // Determine whether the operand is a register def.  Assume that call
-    // instructions never clobber SP, because some backends (e.g., AArch64)
-    // never list SP in the regmask.
+    // Determine whether the operand is a register def.
     if (MO.isReg() && MO.isDef() && MO.getReg() &&
         Register::isPhysicalRegister(MO.getReg()) &&
         !(MI.isCall() && MO.getReg() == SP)) {
-      // Remove ranges of all aliased registers. Note: the actual removal is
-      // done after we finish visiting MachineOperands, for performance reasons.
+      // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
         DeadRegs.insert(*RAI);
     } else if (MO.isRegMask()) {
-      // Remove ranges of all clobbered registers. Register masks don't usually
-      // list SP as preserved.  While the debug info may be off for an
-      // instruction or two around callee-cleanup calls, transferring the
-      // DEBUG_VALUE across the call is still a better user experience. Note:
-      // the actual removal is done after we finish visiting MachineOperands,
-      // for performance reasons.
-      DeadRegMasks.push_back(MO.getRegMask());
+      RegMasks.push_back(MO.getRegMask());
     }
   }
-  // For performance reasons, it's critical to iterate over the open var locs
-  // at most once.
-  for (uint64_t ID : OpenRanges.getVarLocs()) {
-    LocIndex Idx = LocIndex::fromRawInteger(ID);
-    unsigned Reg = VarLocIDs[Idx].isDescribedByReg();
-    if (!Reg)
+
+  // Erase VarLocs which either reside in one of the dead registers. For
+  // performance reasons, it's critical to not iterate over the set of open
+  // VarLocs: iterate over the set of dying/used regs instead.
+  SparseBitVector<> KillSet;
+  for (uint32_t DeadReg : DeadRegs)
+    collectIDsForReg(KillSet, DeadReg, OpenRanges.getVarLocs());
+  for (uint32_t Reg : getUsedRegs(OpenRanges.getVarLocs())) {
+    // The VarLocs residing in this register are already in the kill set.
+    if (DeadRegs.count(Reg))
       continue;
 
-    if (DeadRegs.count(Reg)) {
-      KillSet.set(ID);
-      continue;
-    }
-
+    // Remove ranges of all clobbered registers. Register masks don't usually
+    // list SP as preserved. Assume that call instructions never clobber SP,
+    // because some backends (e.g., AArch64) never list SP in the regmask. While
+    // the debug info may be off for an instruction or two around
+    // callee-cleanup calls, transferring the DEBUG_VALUE across the call is
+    // still a better user experience.
     if (Reg == SP)
       continue;
-    bool AnyRegMaskKillsReg =
-        any_of(DeadRegMasks, [Reg](const uint32_t *RegMask) {
-          return MachineOperand::clobbersPhysReg(RegMask, Reg);
-        });
+    bool AnyRegMaskKillsReg = any_of(RegMasks, [Reg](const uint32_t *RegMask) {
+      return MachineOperand::clobbersPhysReg(RegMask, Reg);
+    });
     if (AnyRegMaskKillsReg)
-      KillSet.set(ID);
+      collectIDsForReg(KillSet, Reg, OpenRanges.getVarLocs());
   }
   OpenRanges.erase(KillSet, VarLocIDs);
 
