@@ -75,6 +75,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1410,6 +1411,7 @@ static bool isStructure(AllocaInst *AI) {
 /// LowerDbgDeclare - Lowers llvm.dbg.declare intrinsics into appropriate set
 /// of llvm.dbg.value intrinsics.
 bool llvm::LowerDbgDeclare(Function &F) {
+  bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
   SmallVector<DbgDeclareInst *, 4> Dbgs;
   for (auto &FI : F)
@@ -1418,7 +1420,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
         Dbgs.push_back(DDI);
 
   if (Dbgs.empty())
-    return false;
+    return Changed;
 
   for (auto &I : Dbgs) {
     DbgDeclareInst *DDI = I;
@@ -1471,8 +1473,14 @@ bool llvm::LowerDbgDeclare(Function &F) {
       }
     }
     DDI->eraseFromParent();
+    Changed = true;
   }
-  return true;
+
+  if (Changed)
+    for (BasicBlock &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
+
+  return Changed;
 }
 
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.
