@@ -2852,7 +2852,7 @@ void RAGreedy::initializeCSRCost() {
 /// The results are stored into \p Out.
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(unsigned Reg, HintsInfo &Out) {
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
+  for (const MachineInstr &Instr : MRI->reg_instructions(Reg)) {
     if (!Instr.isFullCopy())
       continue;
     // Look for the other end of the copy.

@@ -982,7 +982,7 @@ void BT::visitUsesOf(unsigned Reg) {
     dbgs() << "queuing uses of modified reg " << printReg(Reg, &ME.TRI)
            << " cell: " << ME.getCell(Reg, Map) << '\n';
 
-  for (MachineInstr &UseI : MRI.use_nodbg_instructions(Reg))
+  for (MachineInstr &UseI : MRI.use_instructions(Reg))
     UseQ.push(&UseI);
 }
 

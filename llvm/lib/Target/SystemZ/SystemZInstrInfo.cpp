@@ -659,7 +659,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     if (!commuteInstruction(UseMI, false, CommuteIdx, UseIdx))
       return false;
 
-  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+  bool DeleteDef = MRI->hasOneUse(Reg);
   UseMI.setDesc(get(NewUseOpc));
   if (TieOps)
     UseMI.tieOperands(0, 1);

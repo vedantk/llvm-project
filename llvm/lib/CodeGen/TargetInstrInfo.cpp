@@ -707,7 +707,7 @@ bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
   // 4. The previous instruction's result must only be used by Inst.
   return MI1->getOpcode() == AssocOpcode && isAssociativeAndCommutative(*MI1) &&
          hasReassociableOperands(*MI1, MBB) &&
-         MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
+         MRI.hasOneUse(MI1->getOperand(0).getReg());
 }
 
 // 1. The operation must be associative and commutative.

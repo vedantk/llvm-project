@@ -580,7 +580,7 @@ void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
     }
 
     // Expand closure through register uses.
-    for (auto &UseMI : MRI->use_nodbg_instructions(CurReg)) {
+    for (auto &UseMI : MRI->use_instructions(CurReg)) {
       // We would like to avoid converting closures which calculare addresses,
       // as this should remain in GPRs.
       if (usedAsAddr(UseMI, CurReg, TII)) {

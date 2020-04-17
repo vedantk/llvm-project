@@ -2230,7 +2230,7 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                    const TargetInstrInfo *TII) const {
   if (!Reg.isVirtual())
     return nullptr;
-  if (!MRI.hasOneNonDBGUse(Reg))
+  if (!MRI.hasOneUse(Reg))
     return nullptr;
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)
@@ -3242,7 +3242,7 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     // Could be t2MOVi32imm @xx
     return false;
 
-  if (!MRI->hasOneNonDBGUse(Reg))
+  if (!MRI->hasOneUse(Reg))
     return false;
 
   const MCInstrDesc &DefMCID = DefMI.getDesc();

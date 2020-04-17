@@ -539,7 +539,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
     MovX->eraseFromParent();
     MovY->eraseFromParent();
     MachineInstr *Next = &*std::next(MovT.getIterator());
-    if (MRI.use_nodbg_empty(T))
+    if (MRI.use_empty(T))
       MovT.eraseFromParent();
     else
       Xop.setIsKill(false);

@@ -330,7 +330,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
   static_assert(X86::FP6 == X86::FP0+6, "Register enums aren't sorted right!");
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned i = 0; i <= 6; ++i)
-    if (!MRI.reg_nodbg_empty(X86::FP0 + i)) {
+    if (!MRI.reg_empty(X86::FP0 + i)) {
       FPIsUsed = true;
       break;
     }

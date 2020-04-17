@@ -99,7 +99,7 @@ MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
   bool Is64Bit;
   unsigned NewOpc = TII->convertToFlagSettingOpc(MI.getOpcode(), Is64Bit);
   Register NewDestReg = MI.getOperand(0).getReg();
-  if (MRI->hasOneNonDBGUse(MI.getOperand(0).getReg()))
+  if (MRI->hasOneUse(MI.getOperand(0).getReg()))
     NewDestReg = Is64Bit ? AArch64::XZR : AArch64::WZR;
 
   MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),

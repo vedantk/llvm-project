@@ -1224,7 +1224,7 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
                                   const MachineRegisterInfo &MRI,
                                   const LiveIntervals *LIS) {
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-  for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI.use_operands(Reg)) {
     if (MO.isUndef())
       continue;
     const MachineInstr *MI = MO.getParent();

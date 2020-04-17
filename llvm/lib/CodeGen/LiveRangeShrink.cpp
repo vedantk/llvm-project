@@ -189,7 +189,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
             break;
           }
           DefMO = &MO;
-        } else if (MRI.hasOneNonDBGUse(Reg) && MRI.hasOneDef(Reg) && DefMO &&
+        } else if (MRI.hasOneUse(Reg) && MRI.hasOneDef(Reg) && DefMO &&
                    MRI.getRegClass(DefMO->getReg()) ==
                        MRI.getRegClass(MO.getReg())) {
           // The heuristic does not handle different register classes yet

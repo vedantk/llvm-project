@@ -842,7 +842,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
 
   // If some of the uses of IntA.reg is already coalesced away, return false.
   // It's not possible to determine whether it's safe to perform the coalescing.
-  for (MachineOperand &MO : MRI->use_nodbg_operands(IntA.reg)) {
+  for (MachineOperand &MO : MRI->use_operands(IntA.reg)) {
     MachineInstr *UseMI = MO.getParent();
     unsigned OpNo = &MO - &UseMI->getOperand(0);
     SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
@@ -1505,7 +1505,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   // If the virtual SrcReg is completely eliminated, update all DBG_VALUEs
   // to describe DstReg instead.
-  if (MRI->use_nodbg_empty(SrcReg)) {
+  if (MRI->use_empty(SrcReg)) {
     for (MachineOperand &UseMO : MRI->use_operands(SrcReg)) {
       MachineInstr *UseMI = UseMO.getParent();
       if (UseMI->isDebugValue()) {
@@ -1525,7 +1525,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     return true;
 
   unsigned NumCopyUses = 0;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(SrcReg)) {
+  for (MachineOperand &UseMO : MRI->use_operands(SrcReg)) {
     if (UseMO.getParent()->isCopyLike())
       NumCopyUses++;
   }
@@ -1613,7 +1613,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     LIS->removeVRegDefAt(DstLI, RegIndex);
 
   // Mark uses as undef.
-  for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
+  for (MachineOperand &MO : MRI->reg_operands(DstReg)) {
     if (MO.isDef() /*|| MO.isUndef()*/)
       continue;
     const MachineInstr &MI = *MO.getParent();
@@ -2074,7 +2074,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     // =>
     //   %physreg_x = def
     //   ...
-    if (!MRI->hasOneNonDBGUse(SrcReg)) {
+    if (!MRI->hasOneUse(SrcReg)) {
       LLVM_DEBUG(dbgs() << "\t\tMultiple vreg uses!\n");
       return false;
     }
@@ -2085,7 +2085,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     }
 
     MachineInstr &DestMI = *MRI->getVRegDef(SrcReg);
-    CopyMI = &*MRI->use_instr_nodbg_begin(SrcReg);
+    CopyMI = &*MRI->use_instr_begin(SrcReg);
     SlotIndex CopyRegIdx = LIS->getInstructionIndex(*CopyMI).getRegSlot();
     SlotIndex DestRegIdx = LIS->getInstructionIndex(DestMI).getRegSlot();
 
@@ -3692,7 +3692,7 @@ static bool isTerminalReg(unsigned DstReg, const MachineInstr &Copy,
                           const MachineRegisterInfo *MRI) {
   assert(Copy.isCopyLike());
   // Check if the destination of this copy as any other affinity.
-  for (const MachineInstr &MI : MRI->reg_nodbg_instructions(DstReg))
+  for (const MachineInstr &MI : MRI->reg_instructions(DstReg))
     if (&MI != &Copy && MI.isCopyLike())
       return false;
   return true;
@@ -3717,7 +3717,7 @@ bool RegisterCoalescer::applyTerminalRule(const MachineInstr &Copy) const {
   // copy involving SrcReg.
   const MachineBasicBlock *OrigBB = Copy.getParent();
   const LiveInterval &DstLI = LIS->getInterval(DstReg);
-  for (const MachineInstr &MI : MRI->reg_nodbg_instructions(SrcReg)) {
+  for (const MachineInstr &MI : MRI->reg_instructions(SrcReg)) {
     // Technically we should check if the weight of the new copy is
     // interesting compared to the other one and update the weight
     // of the copies accordingly. However, this would only work if
@@ -3898,7 +3898,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
                     << " regs.\n");
   for (unsigned i = 0, e = InflateRegs.size(); i != e; ++i) {
     unsigned Reg = InflateRegs[i];
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_empty(Reg))
       continue;
     if (MRI->recomputeRegClass(Reg)) {
       LLVM_DEBUG(dbgs() << printReg(Reg) << " inflated to "

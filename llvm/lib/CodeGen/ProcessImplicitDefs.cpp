@@ -79,7 +79,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   if (Register::isVirtualRegister(Reg)) {
     // For virtual registers, mark all uses as <undef>, and convert users to
     // implicit-def when possible.
-    for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    for (MachineOperand &MO : MRI->use_operands(Reg)) {
       MO.setIsUndef();
       MachineInstr *UserMI = MO.getParent();
       if (!canTurnIntoImplicitDef(UserMI))

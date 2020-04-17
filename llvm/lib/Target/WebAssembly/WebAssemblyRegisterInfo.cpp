@@ -98,7 +98,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
         // the CONST_I32 happens to have exactly one def and one use. We
         // should generalize this to optimize in more cases.
         if (Def && Def->getOpcode() == WebAssembly::CONST_I32 &&
-            MRI.hasOneNonDBGUse(Def->getOperand(0).getReg())) {
+            MRI.hasOneUse(Def->getOperand(0).getReg())) {
           MachineOperand &ImmMO = Def->getOperand(1);
           ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
           MI.getOperand(FIOperandNum)

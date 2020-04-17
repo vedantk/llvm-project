@@ -201,7 +201,7 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   // Remove dead IMPLICIT_DEF instructions.
   for (MachineInstr *DefMI : ImpDefs) {
     Register DefReg = DefMI->getOperand(0).getReg();
-    if (MRI->use_nodbg_empty(DefReg)) {
+    if (MRI->use_empty(DefReg)) {
       if (LIS)
         LIS->RemoveMachineInstrFromMaps(*DefMI);
       DefMI->eraseFromParent();

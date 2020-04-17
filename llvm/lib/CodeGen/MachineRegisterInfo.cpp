@@ -130,7 +130,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
     return false;
 
   // Accumulate constraints from all uses.
-  for (MachineOperand &MO : reg_nodbg_operands(Reg)) {
+  for (MachineOperand &MO : reg_operands(Reg)) {
     // Apply the effect of the given operand to NewRC.
     MachineInstr *MI = MO.getParent();
     unsigned OpNo = &MO - &MI->getOperand(0);
@@ -416,20 +416,6 @@ MachineInstr *MachineRegisterInfo::getUniqueVRegDef(Register Reg) const {
   return &*I;
 }
 
-bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
-  use_nodbg_iterator UI = use_nodbg_begin(RegNo);
-  if (UI == use_nodbg_end())
-    return false;
-  return ++UI == use_nodbg_end();
-}
-
-bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
-  use_instr_nodbg_iterator UI = use_instr_nodbg_begin(RegNo);
-  if (UI == use_instr_nodbg_end())
-    return false;
-  return ++UI == use_instr_nodbg_end();
-}
-
 /// clearKillFlags - Iterate over all the uses of the given register and
 /// clear the kill flag from the MachineOperand. This function is used by
 /// optimization passes which extend register lifetimes and need only
@@ -473,7 +459,7 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
   // Emit the copies into the top of the block.
   for (unsigned i = 0, e = LiveIns.size(); i != e; ++i)
     if (LiveIns[i].second) {
-      if (use_nodbg_empty(LiveIns[i].second)) {
+      if (use_empty(LiveIns[i].second)) {
         // The livein has no non-dbg uses. Drop it.
         //
         // It would be preferable to have isel avoid creating live-in
@@ -604,7 +590,7 @@ bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();
        ++AliasReg) {
-    if (!reg_nodbg_empty(*AliasReg))
+    if (!reg_empty(*AliasReg))
       return true;
   }
   return false;

@@ -41,7 +41,7 @@ void llvm::calculateSpillWeightsAndHints(LiveIntervals &LIS,
   VirtRegAuxInfo VRAI(MF, LIS, VRM, MLI, MBFI, norm);
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI.reg_nodbg_empty(Reg))
+    if (MRI.reg_empty(Reg))
       continue;
     VRAI.calculateSpillWeightAndHint(LIS.getInterval(Reg));
   }
@@ -203,9 +203,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   };
   std::set<CopyHint> CopyHints;
 
-  for (MachineRegisterInfo::reg_instr_nodbg_iterator
-           I = mri.reg_instr_nodbg_begin(li.reg),
-           E = mri.reg_instr_nodbg_end();
+  for (MachineRegisterInfo::reg_instr_iterator
+           I = mri.reg_instr_begin(li.reg),
+           E = mri.reg_instr_end();
        I != E;) {
     MachineInstr *mi = &*(I++);
 

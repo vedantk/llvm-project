@@ -312,7 +312,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
 void VirtRegRewriter::addMBBLiveIns() {
   for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
     Register VirtReg = Register::index2VirtReg(Idx);
-    if (MRI->reg_nodbg_empty(VirtReg))
+    if (MRI->reg_empty(VirtReg))
       continue;
     LiveInterval &LI = LIS->getInterval(VirtReg);
     if (LI.empty() || LIS->intervalIsInOneMBB(LI))

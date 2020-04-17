@@ -139,7 +139,7 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
     MachineBasicBlock &MBB = *MI->getParent();
     // All of the user MIs of this reg.
     SmallPtrSet<MachineInstr *, 32> Users;
-    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+    for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
       if (!UseMI.isPHI())
         Users.insert(&UseMI);
     }

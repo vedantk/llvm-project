@@ -277,7 +277,7 @@ public:
   /// reg_iterator/reg_begin/reg_end - Walk all defs and uses of the specified
   /// register.
   using reg_iterator =
-      defusechain_iterator<true, true, false, true, false, false>;
+      defusechain_iterator<true, true, /*SkipDebug=*/true, true, false, false>;
   reg_iterator reg_begin(Register RegNo) const {
     return reg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -290,7 +290,8 @@ public:
   /// reg_instr_iterator/reg_instr_begin/reg_instr_end - Walk all defs and uses
   /// of the specified register, stepping by MachineInstr.
   using reg_instr_iterator =
-      defusechain_instr_iterator<true, true, false, false, true, false>;
+      defusechain_instr_iterator<true, true, /*SkipDebug=*/true, false, true,
+                                 false>;
   reg_instr_iterator reg_instr_begin(Register RegNo) const {
     return reg_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -306,7 +307,8 @@ public:
   /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and uses
   /// of the specified register, stepping by bundle.
   using reg_bundle_iterator =
-      defusechain_instr_iterator<true, true, false, false, false, true>;
+      defusechain_instr_iterator<true, true, /*SkipDebug=*/true, false, false,
+                                 true>;
   reg_bundle_iterator reg_bundle_begin(Register RegNo) const {
     return reg_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -326,15 +328,20 @@ public:
   /// of the specified register, skipping those marked as Debug.
   using reg_nodbg_iterator =
       defusechain_iterator<true, true, true, true, false, false>;
-  reg_nodbg_iterator reg_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(reg_nodbg_iterator reg_nodbg_begin(Register RegNo)
+                                const,
+                            "Use reg_begin") {
     return reg_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static reg_nodbg_iterator reg_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(static reg_nodbg_iterator reg_nodbg_end(),
+                            "Use reg_end") {
     return reg_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<reg_nodbg_iterator>
-  reg_nodbg_operands(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline iterator_range<reg_nodbg_iterator> reg_nodbg_operands(Register Reg)
+          const,
+      "Use reg_operands") {
     return make_range(reg_nodbg_begin(Reg), reg_nodbg_end());
   }
 
@@ -343,15 +350,20 @@ public:
   /// skipping those marked as Debug.
   using reg_instr_nodbg_iterator =
       defusechain_instr_iterator<true, true, true, false, true, false>;
-  reg_instr_nodbg_iterator reg_instr_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      reg_instr_nodbg_iterator reg_instr_nodbg_begin(Register RegNo) const,
+      "Use reg_instr_begin") {
     return reg_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static reg_instr_nodbg_iterator reg_instr_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      static reg_instr_nodbg_iterator reg_instr_nodbg_end(),
+      "Use reg_instr_end") {
     return reg_instr_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<reg_instr_nodbg_iterator>
-  reg_nodbg_instructions(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(inline iterator_range<reg_instr_nodbg_iterator>
+                                reg_nodbg_instructions(Register Reg) const,
+                            "Use reg_instructions") {
     return make_range(reg_instr_nodbg_begin(Reg), reg_instr_nodbg_end());
   }
 
@@ -360,27 +372,33 @@ public:
   /// skipping those marked as Debug.
   using reg_bundle_nodbg_iterator =
       defusechain_instr_iterator<true, true, true, false, false, true>;
-  reg_bundle_nodbg_iterator reg_bundle_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      reg_bundle_nodbg_iterator reg_bundle_nodbg_begin(Register RegNo) const,
+      "Use reg_bundle_begin") {
     return reg_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static reg_bundle_nodbg_iterator reg_bundle_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      static reg_bundle_nodbg_iterator reg_bundle_nodbg_end(),
+      "Use reg_bundle_end") {
     return reg_bundle_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<reg_bundle_nodbg_iterator>
-  reg_nodbg_bundles(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(inline iterator_range<reg_bundle_nodbg_iterator>
+                                reg_nodbg_bundles(Register Reg) const,
+                            "Use reg_bundles") {
     return make_range(reg_bundle_nodbg_begin(Reg), reg_bundle_nodbg_end());
   }
 
   /// reg_nodbg_empty - Return true if the only instructions using or defining
   /// Reg are Debug instructions.
-  bool reg_nodbg_empty(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(bool reg_nodbg_empty(Register RegNo) const,
+                            "Use reg_empty") {
     return reg_nodbg_begin(RegNo) == reg_nodbg_end();
   }
 
   /// def_iterator/def_begin/def_end - Walk all defs of the specified register.
   using def_iterator =
-      defusechain_iterator<false, true, false, true, false, false>;
+      defusechain_iterator<false, true, /*SkipDebug=*/true, true, false, false>;
   def_iterator def_begin(Register RegNo) const {
     return def_iterator(getRegUseDefListHead(RegNo));
   }
@@ -393,7 +411,8 @@ public:
   /// def_instr_iterator/def_instr_begin/def_instr_end - Walk all defs of the
   /// specified register, stepping by MachineInst.
   using def_instr_iterator =
-      defusechain_instr_iterator<false, true, false, false, true, false>;
+      defusechain_instr_iterator<false, true, /*SkipDebug=*/true, false, true,
+                                 false>;
   def_instr_iterator def_instr_begin(Register RegNo) const {
     return def_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -409,7 +428,8 @@ public:
   /// def_bundle_iterator/def_bundle_begin/def_bundle_end - Walk all defs of the
   /// specified register, stepping by bundle.
   using def_bundle_iterator =
-      defusechain_instr_iterator<false, true, false, false, false, true>;
+      defusechain_instr_iterator<false, true, /*SkipDebug=*/true, false, false,
+                                 true>;
   def_bundle_iterator def_bundle_begin(Register RegNo) const {
     return def_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -450,7 +470,7 @@ public:
 
   /// use_iterator/use_begin/use_end - Walk all uses of the specified register.
   using use_iterator =
-      defusechain_iterator<true, false, false, true, false, false>;
+      defusechain_iterator<true, false, /*SkipDebug=*/true, true, false, false>;
   use_iterator use_begin(Register RegNo) const {
     return use_iterator(getRegUseDefListHead(RegNo));
   }
@@ -463,7 +483,8 @@ public:
   /// use_instr_iterator/use_instr_begin/use_instr_end - Walk all uses of the
   /// specified register, stepping by MachineInstr.
   using use_instr_iterator =
-      defusechain_instr_iterator<true, false, false, false, true, false>;
+      defusechain_instr_iterator<true, false, /*SkipDebug=*/true, false, true,
+                                 false>;
   use_instr_iterator use_instr_begin(Register RegNo) const {
     return use_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -479,7 +500,8 @@ public:
   /// use_bundle_iterator/use_bundle_begin/use_bundle_end - Walk all uses of the
   /// specified register, stepping by bundle.
   using use_bundle_iterator =
-      defusechain_instr_iterator<true, false, false, false, false, true>;
+      defusechain_instr_iterator<true, false, /*SkipDebug=*/true, false, false,
+                                 true>;
   use_bundle_iterator use_bundle_begin(Register RegNo) const {
     return use_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -508,15 +530,20 @@ public:
   /// specified register, skipping those marked as Debug.
   using use_nodbg_iterator =
       defusechain_iterator<true, false, true, true, false, false>;
-  use_nodbg_iterator use_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(use_nodbg_iterator use_nodbg_begin(Register RegNo)
+                                const,
+                            "Use use_begin") {
     return use_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static use_nodbg_iterator use_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(static use_nodbg_iterator use_nodbg_end(),
+                            "Use use_end") {
     return use_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<use_nodbg_iterator>
-  use_nodbg_operands(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline iterator_range<use_nodbg_iterator> use_nodbg_operands(Register Reg)
+          const,
+      "Use use_operands") {
     return make_range(use_nodbg_begin(Reg), use_nodbg_end());
   }
 
@@ -525,16 +552,28 @@ public:
   /// those marked as Debug.
   using use_instr_nodbg_iterator =
       defusechain_instr_iterator<true, false, true, false, true, false>;
-  use_instr_nodbg_iterator use_instr_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      use_instr_nodbg_iterator use_instr_nodbg_begin(Register RegNo) const,
+      "Use use_instr_begin") {
     return use_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static use_instr_nodbg_iterator use_instr_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      static use_instr_nodbg_iterator use_instr_nodbg_end(),
+      "Use use_instr_end") {
     return use_instr_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<use_instr_nodbg_iterator>
-  use_nodbg_instructions(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(inline iterator_range<use_instr_nodbg_iterator>
+                                use_nodbg_instructions(Register Reg) const,
+                            "Use use_instr_end") {
     return make_range(use_instr_nodbg_begin(Reg), use_instr_nodbg_end());
+  }
+
+  bool hasOneUser(Register RegNo) const {
+    use_instr_iterator UI = use_instr_begin(RegNo);
+    if (UI == use_instr_end())
+      return false;
+    return ++UI == use_instr_end();
   }
 
   /// use_bundle_nodbg_iterator/use_bundle_nodbg_begin/use_bundle_nodbg_end - Walk
@@ -542,32 +581,44 @@ public:
   /// those marked as Debug.
   using use_bundle_nodbg_iterator =
       defusechain_instr_iterator<true, false, true, false, false, true>;
-  use_bundle_nodbg_iterator use_bundle_nodbg_begin(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      use_bundle_nodbg_iterator use_bundle_nodbg_begin(Register RegNo) const,
+      "Use use_bundle_begin") {
     return use_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
-  static use_bundle_nodbg_iterator use_bundle_nodbg_end() {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      static use_bundle_nodbg_iterator use_bundle_nodbg_end(),
+      "Use use_bundle_end") {
     return use_bundle_nodbg_iterator(nullptr);
   }
 
-  inline iterator_range<use_bundle_nodbg_iterator>
-  use_nodbg_bundles(Register Reg) const {
+  LLVM_ATTRIBUTE_DEPRECATED(inline iterator_range<use_bundle_nodbg_iterator>
+                                use_nodbg_bundles(Register Reg) const,
+                            "Use use_bundles") {
     return make_range(use_bundle_nodbg_begin(Reg), use_bundle_nodbg_end());
   }
 
   /// use_nodbg_empty - Return true if there are no non-Debug instructions
   /// using the specified register.
-  bool use_nodbg_empty(Register RegNo) const {
+  LLVM_ATTRIBUTE_DEPRECATED(bool use_nodbg_empty(Register RegNo) const,
+                            "Use use_empty") {
     return use_nodbg_begin(RegNo) == use_nodbg_end();
   }
 
   /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
   /// use of the specified register.
-  bool hasOneNonDBGUse(Register RegNo) const;
+  LLVM_ATTRIBUTE_DEPRECATED(bool hasOneNonDBGUse(Register RegNo) const,
+                            "Use hasOneUse") {
+    return hasOneUse(RegNo);
+  }
 
   /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
   /// instruction using the specified register. Said instruction may have
   /// multiple uses.
-  bool hasOneNonDBGUser(Register RegNo) const;
+  LLVM_ATTRIBUTE_DEPRECATED(bool hasOneNonDBGUser(Register RegNo) const,
+                            "Use hasOneUser") {
+    return hasOneUser(RegNo);
+  }
 
   /// replaceRegWith - Replace all instances of FromReg with ToReg in the
   /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),

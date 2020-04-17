@@ -171,7 +171,7 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register Reg = MO.getReg();
     if (!Register::isVirtualRegister(Reg))
       continue;
-    bool OnlyOneUse = MRI->hasOneNonDBGUse(Reg);
+    bool OnlyOneUse = MRI->hasOneUse(Reg);
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
     if (!DefMI->isCopy())
       continue;
@@ -439,10 +439,10 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   if (Register::isVirtualRegister(CSReg) && Register::isVirtualRegister(Reg)) {
     MayIncreasePressure = false;
     SmallPtrSet<MachineInstr*, 8> CSUses;
-    for (MachineInstr &MI : MRI->use_nodbg_instructions(CSReg)) {
+    for (MachineInstr &MI : MRI->use_instructions(CSReg)) {
       CSUses.insert(&MI);
     }
-    for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
+    for (MachineInstr &MI : MRI->use_instructions(Reg)) {
       if (!CSUses.count(&MI)) {
         MayIncreasePressure = true;
         break;
@@ -471,7 +471,7 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   }
   if (!HasVRegUse) {
     bool HasNonCopyUse = false;
-    for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
+    for (MachineInstr &MI : MRI->use_instructions(Reg)) {
       // Ignore copies.
       if (!MI.isCopyLike()) {
         HasNonCopyUse = true;
@@ -485,7 +485,7 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   // Heuristics #3: If the common subexpression is used by PHIs, do not reuse
   // it unless the defined value is already used in the BB of the new use.
   bool HasPHI = false;
-  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CSReg)) {
+  for (MachineInstr &UseMI : MRI->use_instructions(CSReg)) {
     HasPHI |= UseMI.isPHI();
     if (UseMI.getParent() == MI->getParent())
       return true;

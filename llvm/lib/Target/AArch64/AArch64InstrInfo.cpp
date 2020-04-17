@@ -1241,7 +1241,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
     return false;
 
   // CmpInstr is a Compare instruction if destination register is not used.
-  if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
+  if (!MRI->use_empty(CmpInstr.getOperand(0).getReg()))
     return false;
 
   return substituteCmpToZero(CmpInstr, SrcReg, MRI);
@@ -3748,7 +3748,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
   if (!MI || MI->getParent() != &MBB || (unsigned)MI->getOpcode() != CombineOpc)
     return false;
   // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+  if (!MRI.hasOneUse(MI->getOperand(0).getReg()))
     return false;
 
   if (CheckZeroReg) {
@@ -5347,7 +5347,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
     Register CopyVReg = DefMI->getOperand(1).getReg();
-    if (!MRI->hasOneNonDBGUse(CopyVReg))
+    if (!MRI->hasOneUse(CopyVReg))
       return false;
     if (!MRI->hasOneDef(CopyVReg))
       return false;
@@ -5364,7 +5364,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
       return false;
     if (DefMI->getParent() != MBB)
       return false;
-    if (!MRI->hasOneNonDBGUse(VReg))
+    if (!MRI->hasOneUse(VReg))
       return false;
 
     bool Is32Bit = (DefMI->getOpcode() == AArch64::ANDWri);

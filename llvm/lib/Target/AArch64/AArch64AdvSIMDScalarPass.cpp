@@ -215,7 +215,7 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
       --NumNewCopies;
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (MOSrc0 && MRI->hasOneNonDBGUse(OrigSrc0))
+    if (MOSrc0 && MRI->hasOneUse(OrigSrc0))
       ++NumRemovableCopies;
   }
   if (!MRI->def_empty(OrigSrc1)) {
@@ -227,7 +227,7 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
       --NumNewCopies;
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (MOSrc1 && MRI->hasOneNonDBGUse(OrigSrc1))
+    if (MOSrc1 && MRI->hasOneUse(OrigSrc1))
       ++NumRemovableCopies;
   }
 
@@ -238,9 +238,9 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
   // heuristic that approximates the graph based cost analysis described above.
   Register Dst = MI.getOperand(0).getReg();
   bool AllUsesAreCopies = true;
-  for (MachineRegisterInfo::use_instr_nodbg_iterator
-           Use = MRI->use_instr_nodbg_begin(Dst),
-           E = MRI->use_instr_nodbg_end();
+  for (MachineRegisterInfo::use_instr_iterator
+           Use = MRI->use_instr_begin(Dst),
+           E = MRI->use_instr_end();
        Use != E; ++Use) {
     unsigned SubReg;
     if (getSrcFromCopy(&*Use, MRI, SubReg) || isTransformable(*Use))
@@ -310,7 +310,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
       KillSrc0 = MOSrc0->isKill();
       // Src0 is going to be reused, thus, it cannot be killed anymore.
       MOSrc0->setIsKill(false);
-      if (MRI->hasOneNonDBGUse(OrigSrc0)) {
+      if (MRI->hasOneUse(OrigSrc0)) {
         assert(MOSrc0 && "Can't delete copy w/o a valid original source!");
         Def->eraseFromParent();
         ++NumCopiesDeleted;
@@ -329,7 +329,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
       KillSrc1 = MOSrc1->isKill();
       // Src0 is going to be reused, thus, it cannot be killed anymore.
       MOSrc1->setIsKill(false);
-      if (MRI->hasOneNonDBGUse(OrigSrc1)) {
+      if (MRI->hasOneUse(OrigSrc1)) {
         assert(MOSrc1 && "Can't delete copy w/o a valid original source!");
         Def->eraseFromParent();
         ++NumCopiesDeleted;

@@ -281,7 +281,7 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
   // block.
   static const unsigned Limit = 8;
   unsigned C = 0;
-  for (const MachineInstr &UseInst : MRI->reg_nodbg_instructions(VirtReg)) {
+  for (const MachineInstr &UseInst : MRI->reg_instructions(VirtReg)) {
     if (UseInst.getParent() != MBB || ++C >= Limit) {
       MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
       // Cannot be live-out if there are no successors.
@@ -359,10 +359,10 @@ bool RegAllocFast::isLastUseOfLocalReg(const MachineOperand &MO) const {
     return false;
 
   // Check that the use/def chain has exactly one operand - MO.
-  MachineRegisterInfo::reg_nodbg_iterator I = MRI->reg_nodbg_begin(MO.getReg());
+  MachineRegisterInfo::reg_iterator I = MRI->reg_begin(MO.getReg());
   if (&*I != &MO)
     return false;
-  return ++I == MRI->reg_nodbg_end();
+  return ++I == MRI->reg_end();
 }
 
 /// Set kill flags on last use of a virtual register.
@@ -784,8 +784,8 @@ MCPhysReg RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   if (!LRI->PhysReg) {
     // If there is no hint, peek at the only use of this register.
     if ((!Hint || !Hint.isPhysical()) &&
-        MRI->hasOneNonDBGUse(VirtReg)) {
-      const MachineInstr &UseMI = *MRI->use_instr_nodbg_begin(VirtReg);
+        MRI->hasOneUse(VirtReg)) {
+      const MachineInstr &UseMI = *MRI->use_instr_begin(VirtReg);
       // It's a copy, use the destination register as a hint.
       if (UseMI.isCopyLike())
         Hint = UseMI.getOperand(0).getReg();

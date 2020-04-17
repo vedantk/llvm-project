@@ -225,7 +225,7 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   Register SrcReg = MI.getOperand(1).getReg();
   Register DstReg = MI.getOperand(0).getReg();
   if (!Register::isVirtualRegister(SrcReg) ||
-      !Register::isVirtualRegister(DstReg) || !MRI->hasOneNonDBGUse(SrcReg))
+      !Register::isVirtualRegister(DstReg) || !MRI->hasOneUse(SrcReg))
     return false;
 
   const TargetRegisterClass *SRC = MRI->getRegClass(SrcReg);
@@ -262,7 +262,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   assert(Register::isVirtualRegister(Reg) && "Only makes sense for vregs");
 
   // Ignore debug uses because debug info doesn't affect the code.
-  if (MRI->use_nodbg_empty(Reg))
+  if (MRI->use_empty(Reg))
     return true;
 
   // BreakPHIEdge is true if all the uses are in the successor MBB being sunken
@@ -279,7 +279,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   //
   // %bb.2:
   //     %p = PHI %y, %bb.0, %def, %bb.1
-  if (all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
+  if (all_of(MRI->use_operands(Reg), [&](MachineOperand &MO) {
         MachineInstr *UseInst = MO.getParent();
         unsigned OpNo = UseInst->getOperandNo(&MO);
         MachineBasicBlock *UseBlock = UseInst->getParent();
@@ -290,7 +290,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
     return true;
   }
 
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+  for (MachineOperand &MO : MRI->use_operands(Reg)) {
     // Determine the block of the use.
     MachineInstr *UseInst = MO.getParent();
     unsigned OpNo = &MO - &UseInst->getOperand(0);
@@ -477,7 +477,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
     // If this instruction is the only user of a virtual register,
     // check if breaking the edge will enable sinking
     // both this instruction and the defining instruction.
-    if (MRI->hasOneNonDBGUse(Reg)) {
+    if (MRI->hasOneUse(Reg)) {
       // If the definition resides in same MBB,
       // claim it's likely we can sink these together.
       // If definition resides elsewhere, we aren't
@@ -582,7 +582,7 @@ bool MachineSinking::isProfitableToSinkTo(unsigned Reg, MachineInstr &MI,
 
   // Check if only use in post dominated block is PHI instruction.
   bool NonPHIUse = false;
-  for (MachineInstr &UseInst : MRI->use_nodbg_instructions(Reg)) {
+  for (MachineInstr &UseInst : MRI->use_instructions(Reg)) {
     MachineBasicBlock *UseBlock = UseInst.getParent();
     if (UseBlock == SuccToSinkTo && !UseInst.isPHI())
       NonPHIUse = true;

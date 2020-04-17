@@ -66,7 +66,7 @@ static float computeWeight(const MachineRegisterInfo *MRI,
                            const MachineBlockFrequencyInfo *MBFI,
                            unsigned VReg) {
   float Weight = 0.0f;
-  for (MachineOperand &MO : MRI->reg_nodbg_operands(VReg))
+  for (MachineOperand &MO : MRI->reg_operands(VReg))
     Weight += LiveIntervals::getSpillWeight(MO.isDef(), MO.isUse(), MBFI,
                                             *MO.getParent());
   return Weight;

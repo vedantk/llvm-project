@@ -1392,7 +1392,7 @@ bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
-  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+  bool DeleteDef = MRI->hasOneUse(Reg);
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
 
   if (DeleteDef)

@@ -142,7 +142,7 @@ static bool dominatesAllUsesOf(const MachineInstr *MI, unsigned VReg,
 
   assert(Register::isVirtualRegister(VReg) && "Expected virtual register!");
 
-  for (auto it = MRI->use_nodbg_begin(VReg), end = MRI->use_nodbg_end();
+  for (auto it = MRI->use_begin(VReg), end = MRI->use_end();
        it != end; ++it) {
     MachineInstr *User = it->getParent();
     if (User->isPHI()) {
@@ -217,7 +217,7 @@ MachineInstr *ARCOptAddrMode::tryToCombine(MachineInstr &Ldst) {
     return nullptr;
   }
 
-  for (auto &Add : MRI->use_nodbg_instructions(B)) {
+  for (auto &Add : MRI->use_instructions(B)) {
     int64_t Incr;
     if (!isAddConstantOp(Add, Incr))
       continue;
@@ -302,7 +302,7 @@ ARCOptAddrMode::canJoinInstructions(MachineInstr *Ldst, MachineInstr *Add,
 
   SmallVector<MachineInstr *, 4> UsesAfterLdst;
   SmallVector<MachineInstr *, 4> UsesAfterAdd;
-  for (MachineInstr &MI : MRI->use_nodbg_instructions(BaseReg)) {
+  for (MachineInstr &MI : MRI->use_instructions(BaseReg)) {
     if (&MI == Ldst || &MI == Add)
       continue;
     if (&MI != Add && MDT->dominates(Ldst, &MI))

@@ -2277,10 +2277,10 @@ static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr *&Br) {
   Register CondDef = MI.getOperand(0).getReg();
-  if (!MRI.hasOneNonDBGUse(CondDef))
+  if (!MRI.hasOneUse(CondDef))
     return nullptr;
 
-  MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(CondDef);
+  MachineInstr &UseMI = *MRI.use_instr_begin(CondDef);
   if (UseMI.getParent() != MI.getParent() ||
       UseMI.getOpcode() != AMDGPU::G_BRCOND)
     return nullptr;

@@ -319,7 +319,7 @@ bool X86CmovConverterPass::collectCmovCandidates(
         // Check if we were relying on zero-extending behavior of the CMOV.
         if (!SkipGroup &&
             llvm::any_of(
-                MRI->use_nodbg_instructions(I.defs().begin()->getReg()),
+                MRI->use_instructions(I.defs().begin()->getReg()),
                 [&](MachineInstr &UseI) {
                   return UseI.getOpcode() == X86::SUBREG_TO_REG;
                 }))

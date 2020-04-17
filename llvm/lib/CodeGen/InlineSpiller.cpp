@@ -288,9 +288,9 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
   MachineInstr *UseMI = nullptr;
 
   // Check that all uses satisfy our criteria.
-  for (MachineRegisterInfo::reg_instr_nodbg_iterator
-       RI = MRI.reg_instr_nodbg_begin(SnipLI.reg),
-       E = MRI.reg_instr_nodbg_end(); RI != E; ) {
+  for (MachineRegisterInfo::reg_instr_iterator
+       RI = MRI.reg_instr_begin(SnipLI.reg),
+       E = MRI.reg_instr_end(); RI != E; ) {
     MachineInstr &MI = *RI++;
 
     // Allow copies to/from Reg.
@@ -445,8 +445,8 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
     LLVM_DEBUG(dbgs() << "Merged to stack int: " << *StackInt << '\n');
 
     // Find all spills and copies of VNI.
-    for (MachineRegisterInfo::use_instr_nodbg_iterator
-         UI = MRI.use_instr_nodbg_begin(Reg), E = MRI.use_instr_nodbg_end();
+    for (MachineRegisterInfo::use_instr_iterator
+         UI = MRI.use_instr_begin(Reg), E = MRI.use_instr_end();
          UI != E; ) {
       MachineInstr &MI = *UI++;
       if (!MI.isCopy() && !MI.mayStore())
@@ -706,13 +706,13 @@ void InlineSpiller::reMaterializeAll() {
   // reference instead of whether it has non-empty interval.
   unsigned ResultPos = 0;
   for (unsigned Reg : RegsToSpill) {
-    if (MRI.reg_nodbg_empty(Reg)) {
+    if (MRI.reg_empty(Reg)) {
       Edit->eraseVirtReg(Reg);
       continue;
     }
 
     assert(LIS.hasInterval(Reg) &&
-           (!LIS.getInterval(Reg).empty() || !MRI.reg_nodbg_empty(Reg)) &&
+           (!LIS.getInterval(Reg).empty() || !MRI.reg_empty(Reg)) &&
            "Empty and not used live-range?!");
 
     RegsToSpill[ResultPos++] = Reg;

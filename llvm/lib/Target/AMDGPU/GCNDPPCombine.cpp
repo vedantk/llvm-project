@@ -446,7 +446,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   bool Rollback = true;
   SmallVector<MachineOperand*, 16> Uses;
 
-  for (auto &Use : MRI->use_nodbg_operands(DPPMovReg)) {
+  for (auto &Use : MRI->use_operands(DPPMovReg)) {
     Uses.push_back(&Use);
   }
 
@@ -479,7 +479,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       if (!FwdSubReg)
         break;
 
-      for (auto &Op : MRI->use_nodbg_operands(FwdReg)) {
+      for (auto &Op : MRI->use_operands(FwdReg)) {
         if (Op.getSubReg() == FwdSubReg)
           Uses.push_back(&Op);
       }
@@ -542,7 +542,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   if (!Rollback) {
     for (auto &S : RegSeqWithOpNos) {
-      if (MRI->use_nodbg_empty(S.first->getOperand(0).getReg())) {
+      if (MRI->use_empty(S.first->getOperand(0).getReg())) {
         S.first->eraseFromParent();
         continue;
       }

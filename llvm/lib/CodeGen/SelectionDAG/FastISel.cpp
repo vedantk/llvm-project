@@ -273,7 +273,7 @@ void FastISel::sinkLocalValueMaterialization(MachineInstr &LocalMI,
   // We can DCE this instruction if there are no uses and it wasn't a
   // materialized for a successor PHI node.
   bool UsedByPHI = isRegUsedByPhiNodes(DefReg, FuncInfo);
-  if (!UsedByPHI && MRI.use_nodbg_empty(DefReg)) {
+  if (!UsedByPHI && MRI.use_empty(DefReg)) {
     if (EmitStartPt == &LocalMI)
       EmitStartPt = EmitStartPt->getPrevNode();
     LLVM_DEBUG(dbgs() << "removing dead local value materialization "
@@ -291,7 +291,7 @@ void FastISel::sinkLocalValueMaterialization(MachineInstr &LocalMI,
   // Find the first user in the BB.
   MachineInstr *FirstUser = nullptr;
   unsigned FirstOrder = std::numeric_limits<unsigned>::max();
-  for (MachineInstr &UseInst : MRI.use_nodbg_instructions(DefReg)) {
+  for (MachineInstr &UseInst : MRI.use_instructions(DefReg)) {
     auto I = OrderMap.Orders.find(&UseInst);
     assert(I != OrderMap.Orders.end() &&
            "local value used by instruction outside local region");

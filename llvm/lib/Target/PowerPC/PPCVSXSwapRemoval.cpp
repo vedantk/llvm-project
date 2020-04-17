@@ -673,7 +673,7 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
       // location information is still maintained by this optimization
       // because it remains on the LXVD2X and STXVD2X instructions after
       // the XXPERMDIs are removed.)
-      for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
+      for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
         int UseIdx = SwapMap[&UseMI];
 
         if (!SwapVector[UseIdx].IsSwap || SwapVector[UseIdx].IsLoad ||
@@ -716,7 +716,7 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
 
       // Ensure all uses of the register defined by DefMI feed store
       // instructions
-      for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
+      for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
         int UseIdx = SwapMap[&UseMI];
 
         if (SwapVector[UseIdx].VSEMI->getOpcode() != MI->getOpcode()) {
@@ -758,7 +758,7 @@ void PPCVSXSwapRemoval::markSwapsForRemoval() {
         MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
         Register DefReg = MI->getOperand(0).getReg();
 
-        for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
+        for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
           int UseIdx = SwapMap[&UseMI];
           SwapVector[UseIdx].WillRemove = 1;
 

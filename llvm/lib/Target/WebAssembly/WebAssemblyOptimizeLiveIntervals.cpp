@@ -85,7 +85,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
     unsigned Reg = Register::index2VirtReg(I);
     auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
 
-    if (MRI.reg_nodbg_empty(Reg))
+    if (MRI.reg_empty(Reg))
       continue;
 
     LIS.splitSeparateComponents(LIS.getInterval(Reg), SplitLIs);

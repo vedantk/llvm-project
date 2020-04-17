@@ -176,7 +176,7 @@ bool RenameIndependentSubregs::findComponents(IntEqClasses &Classes,
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   Classes.grow(NumComponents);
   unsigned Reg = LI.reg;
-  for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI->reg_operands(Reg)) {
     if (!MO.isDef() && !MO.readsReg())
       continue;
     unsigned SubRegIdx = MO.getSubReg();
@@ -213,8 +213,8 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   unsigned Reg = Intervals[0]->reg;
-  for (MachineRegisterInfo::reg_nodbg_iterator I = MRI->reg_nodbg_begin(Reg),
-       E = MRI->reg_nodbg_end(); I != E; ) {
+  for (MachineRegisterInfo::reg_iterator I = MRI->reg_begin(Reg),
+       E = MRI->reg_end(); I != E; ) {
     MachineOperand &MO = *I++;
     if (!MO.isDef() && !MO.readsReg())
       continue;
@@ -254,7 +254,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
       MI->getOperand(TiedIdx).setReg(VReg);
 
       // above substitution breaks the iterator, so restart.
-      I = MRI->reg_nodbg_begin(Reg);
+      I = MRI->reg_begin(Reg);
     }
   }
   // TODO: We could attempt to recompute new register classes while visiting
@@ -342,7 +342,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
       }
     }
 
-    for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    for (MachineOperand &MO : MRI->reg_operands(Reg)) {
       if (!MO.isDef())
         continue;
       unsigned SubRegIdx = MO.getSubReg();

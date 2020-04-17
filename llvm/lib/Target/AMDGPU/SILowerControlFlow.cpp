@@ -163,10 +163,10 @@ char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
                        const SIInstrInfo *TII) {
   Register SaveExecReg = MI.getOperand(0).getReg();
-  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
+  auto U = MRI->use_instr_begin(SaveExecReg);
 
-  if (U == MRI->use_instr_nodbg_end() ||
-      std::next(U) != MRI->use_instr_nodbg_end() ||
+  if (U == MRI->use_instr_end() ||
+      std::next(U) != MRI->use_instr_end() ||
       U->getOpcode() != AMDGPU::SI_END_CF)
     return false;
 

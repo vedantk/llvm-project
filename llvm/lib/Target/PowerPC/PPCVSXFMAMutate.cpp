@@ -280,7 +280,7 @@ protected:
 
         LiveInterval &FMAInt = LIS->getInterval(OldFMAReg);
         VNInfo *FMAValNo = FMAInt.getVNInfoAt(FMAIdx.getRegSlot());
-        for (auto UI = MRI.reg_nodbg_begin(OldFMAReg), UE = MRI.reg_nodbg_end();
+        for (auto UI = MRI.reg_begin(OldFMAReg), UE = MRI.reg_end();
              UI != UE;) {
           MachineOperand &UseMO = *UI;
           MachineInstr *UseMI = UseMO.getParent();

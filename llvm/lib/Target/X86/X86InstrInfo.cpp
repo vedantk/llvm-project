@@ -4056,7 +4056,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case X86::SUB32rr:
   case X86::SUB16rr:
   case X86::SUB8rr: {
-    if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
+    if (!MRI->use_empty(CmpInstr.getOperand(0).getReg()))
       return false;
     // There is no use of the destination register, we can replace SUB with CMP.
     unsigned NewOpcode = 0;

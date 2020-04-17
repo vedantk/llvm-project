@@ -611,7 +611,7 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
     return nullptr;
 
   // Make sure this is the only use of Reg.
-  if (!MRI->hasOneNonDBGUse(Reg))
+  if (!MRI->hasOneUse(Reg))
     return nullptr;
 
   MachineInstr &DefMI = *MRI->getVRegDef(Reg);

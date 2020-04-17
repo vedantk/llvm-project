@@ -2493,7 +2493,7 @@ void MachineVerifier::verifyLiveIntervals() {
     unsigned Reg = Register::index2VirtReg(i);
 
     // Spilling and splitting may leave unused registers around. Skip them.
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_empty(Reg))
       continue;
 
     if (!LiveInts->hasInterval(Reg)) {

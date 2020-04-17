@@ -251,7 +251,7 @@ static bool updateOperand(FoldCandidate &Fold,
     MachineOperand &Dst1 = MI->getOperand(1);
     assert(Dst0.isDef() && Dst1.isDef());
 
-    bool HaveNonDbgCarryUse = !MRI.use_nodbg_empty(Dst1.getReg());
+    bool HaveNonDbgCarryUse = !MRI.use_empty(Dst1.getReg());
 
     const TargetRegisterClass *Dst0RC = MRI.getRegClass(Dst0.getReg());
     Register NewReg0 = MRI.createVirtualRegister(Dst0RC);
@@ -1331,9 +1331,9 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
 
 // We obviously have multiple uses in a clamp since the register is used twice
 // in the same instruction.
-static bool hasOneNonDBGUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
+static bool hasOneUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
   int Count = 0;
-  for (auto I = MRI.use_instr_nodbg_begin(Reg), E = MRI.use_instr_nodbg_end();
+  for (auto I = MRI.use_instr_begin(Reg), E = MRI.use_instr_end();
        I != E; ++I) {
     if (++Count > 1)
       return false;
@@ -1345,7 +1345,7 @@ static bool hasOneNonDBGUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
 // FIXME: Clamp for v_mad_mixhi_f16 handled during isel.
 bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   const MachineOperand *ClampSrc = isClamp(MI);
-  if (!ClampSrc || !hasOneNonDBGUseInst(*MRI, ClampSrc->getReg()))
+  if (!ClampSrc || !hasOneUseInst(*MRI, ClampSrc->getReg()))
     return false;
 
   MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
@@ -1469,7 +1469,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   std::tie(RegOp, OMod) = isOMod(MI);
   if (OMod == SIOutMods::NONE || !RegOp->isReg() ||
       RegOp->getSubReg() != AMDGPU::NoSubRegister ||
-      !hasOneNonDBGUseInst(*MRI, RegOp->getReg()))
+      !hasOneUseInst(*MRI, RegOp->getReg()))
     return false;
 
   MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());

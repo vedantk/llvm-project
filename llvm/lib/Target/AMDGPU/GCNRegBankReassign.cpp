@@ -431,7 +431,7 @@ bool GCNRegBankReassign::isReassignable(unsigned Reg) const {
   if (Def && Def->isCopy() && Def->getOperand(1).getReg() == PhysReg)
     return false;
 
-  for (auto U : MRI->use_nodbg_operands(Reg)) {
+  for (auto U : MRI->use_operands(Reg)) {
     if (U.isImplicit())
       return false;
     const MachineInstr *UseInst = U.getParent();
@@ -573,7 +573,7 @@ unsigned GCNRegBankReassign::computeStallCycles(unsigned SrcReg,
   unsigned UsedBanks = 0;
   SmallSet<const MachineInstr *, 16> Visited;
 
-  for (auto &MI : MRI->use_nodbg_instructions(SrcReg)) {
+  for (auto &MI : MRI->use_instructions(SrcReg)) {
     if (MI.isBundle())
       continue;
     if (!Visited.insert(&MI).second)

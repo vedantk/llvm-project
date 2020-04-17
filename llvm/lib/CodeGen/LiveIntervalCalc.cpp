@@ -62,7 +62,7 @@ void LiveIntervalCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
   // createDeadDef() will deduplicate.
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   unsigned Reg = LI.reg;
-  for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI->reg_operands(Reg)) {
     if (!MO.isDef() && !MO.readsReg())
       continue;
 
@@ -154,7 +154,7 @@ void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,
   // Visit all operands that read Reg. This may include partial defs.
   bool IsSubRange = !Mask.all();
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
-  for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+  for (MachineOperand &MO : MRI->reg_operands(Reg)) {
     // Clear all kill flags. They will be reinserted after register allocation
     // by LiveIntervals::addKillFlags().
     if (MO.isUse())

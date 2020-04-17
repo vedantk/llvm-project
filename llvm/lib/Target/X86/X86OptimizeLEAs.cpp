@@ -441,7 +441,7 @@ bool X86OptimizeLEAPass::isReplaceable(const MachineInstr &First,
   // Loop over all uses of the Last LEA to check that its def register is
   // used only as address base for memory accesses. If so, it can be
   // replaced, otherwise - no.
-  for (auto &MO : MRI->use_nodbg_operands(Last.getOperand(0).getReg())) {
+  for (auto &MO : MRI->use_operands(Last.getOperand(0).getReg())) {
     MachineInstr &MI = *MO.getParent();
 
     // Get the number of the first memory operand.

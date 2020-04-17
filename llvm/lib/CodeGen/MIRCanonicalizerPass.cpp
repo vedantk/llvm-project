@@ -219,7 +219,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
     unsigned Distance = ~0U;
     MachineInstr *UseToBringDefCloserTo = nullptr;
     MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
-    for (auto &UO : MRI->use_nodbg_operands(MO.getReg())) {
+    for (auto &UO : MRI->use_operands(MO.getReg())) {
       MachineInstr *UseInst = UO.getParent();
 
       const unsigned DefLoc = getInstrIdx(*Def);

@@ -147,7 +147,7 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       // zero before register allocation. So we just check for dead vreg defs.
       Register Reg = MO.getReg();
       if (!Register::isVirtualRegister(Reg) ||
-          (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
+          (!MO.isDead() && !MRI->use_empty(Reg)))
         continue;
       assert(!MO.isImplicit() && "Unexpected implicit def!");
       LLVM_DEBUG(dbgs() << "  Dead def operand #" << I << " in:\n    ";

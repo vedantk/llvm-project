@@ -834,7 +834,7 @@ void MachineLICMBase::SinkIntoLoop() {
 }
 
 static bool isOperandKill(const MachineOperand &MO, MachineRegisterInfo *MRI) {
-  return MO.isKill() || MRI->hasOneNonDBGUse(MO.getReg());
+  return MO.isKill() || MRI->hasOneUse(MO.getReg());
 }
 
 /// Find all virtual register references that are liveout of the preheader to
@@ -1127,10 +1127,10 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI) const {
 bool MachineLICMBase::HasHighOperandLatency(MachineInstr &MI,
                                             unsigned DefIdx,
                                             unsigned Reg) const {
-  if (MRI->use_nodbg_empty(Reg))
+  if (MRI->use_empty(Reg))
     return false;
 
-  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+  for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
     if (UseMI.isCopyLike())
       continue;
     if (!CurLoop->contains(UseMI.getParent()))

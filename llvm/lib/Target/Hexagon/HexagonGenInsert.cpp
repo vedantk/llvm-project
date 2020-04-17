@@ -1302,14 +1302,14 @@ void HexagonGenInsert::selectCandidates() {
   }
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
-    using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
+    using use_iterator = MachineRegisterInfo::use_iterator;
     using InstrSet = SmallSet<const MachineInstr *, 16>;
 
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the
     // number of operands.
-    use_iterator E = MRI->use_nodbg_end();
-    for (use_iterator I = MRI->use_nodbg_begin(R); I != E; ++I)
+    use_iterator E = MRI->use_end();
+    for (use_iterator I = MRI->use_begin(R); I != E; ++I)
       UIs.insert(I->getParent());
     unsigned C = UIs.size();
     // Calculate a measure, which is the number of instructions using R,
@@ -1483,7 +1483,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register R = MO.getReg();
-      if (!Register::isVirtualRegister(R) || !MRI->use_nodbg_empty(R)) {
+      if (!Register::isVirtualRegister(R) || !MRI->use_empty(R)) {
         AllDead = false;
         break;
       }

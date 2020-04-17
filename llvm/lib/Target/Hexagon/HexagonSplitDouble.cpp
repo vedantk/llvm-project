@@ -247,7 +247,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     unsigned R = Register::index2VirtReg(x);
     LLVM_DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
-    for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
+    for (auto U = MRI->use_begin(R), Z = MRI->use_end();
          U != Z; ++U) {
       MachineOperand &Op = *U;
       MachineInstr *UseI = Op.getParent();
@@ -433,7 +433,7 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
     if (isInduction(DR, IRM))
       TotalP -= 30;
 
-    for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
+    for (auto U = MRI->use_begin(DR), W = MRI->use_end();
          U != W; ++U) {
       MachineInstr *UseI = U->getParent();
       if (isFixedInstr(UseI)) {
@@ -543,7 +543,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
     return;
 
   auto NoIndOp = [this, CmpR1, CmpR2] (unsigned R) -> bool {
-    for (auto I = MRI->use_nodbg_begin(R), E = MRI->use_nodbg_end();
+    for (auto I = MRI->use_begin(R), E = MRI->use_end();
          I != E; ++I) {
       const MachineInstr *UseI = I->getParent();
       if (UseI->getOpcode() != Hexagon::A2_addp)
@@ -1142,7 +1142,7 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 
     // Collect all instructions, including fixed ones.  We won't split them,
     // but we need to visit them again to insert the REG_SEQUENCE instructions.
-    for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
+    for (auto U = MRI->use_begin(DR), W = MRI->use_end();
          U != W; ++U)
       SplitIns.insert(U->getParent());
 
@@ -1171,7 +1171,7 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
     // registers in this partition, and replace all uses of them with subre-
     // gisters, with the corresponding single registers.
     MISet Uses;
-    for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
+    for (auto U = MRI->use_begin(DR), W = MRI->use_end();
          U != W; ++U)
       Uses.insert(U->getParent());
     for (auto M : Uses)

@@ -262,7 +262,7 @@ sink3AddrInstruction(MachineInstr *MI, unsigned SavedReg,
     KillMI = LIS->getInstructionFromIndex(I->end);
   }
   if (!KillMI) {
-    for (MachineOperand &UseMO : MRI->use_nodbg_operands(SavedReg)) {
+    for (MachineOperand &UseMO : MRI->use_operands(SavedReg)) {
       if (!UseMO.isKill())
         continue;
       KillMI = UseMO.getParent();
@@ -521,10 +521,10 @@ MachineInstr *findOnlyInterestingUse(unsigned Reg, MachineBasicBlock *MBB,
                                      const TargetInstrInfo *TII,
                                      bool &IsCopy,
                                      unsigned &DstReg, bool &IsDstPhys) {
-  if (!MRI->hasOneNonDBGUse(Reg))
+  if (!MRI->hasOneUse(Reg))
     // None or more than one use.
     return nullptr;
-  MachineInstr &UseMI = *MRI->use_instr_nodbg_begin(Reg);
+  MachineInstr &UseMI = *MRI->use_instr_begin(Reg);
   if (UseMI.getParent() != MBB)
     return nullptr;
   unsigned SrcReg;

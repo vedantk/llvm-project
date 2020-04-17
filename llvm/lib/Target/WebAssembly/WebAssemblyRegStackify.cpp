@@ -296,7 +296,7 @@ static bool hasOneUse(unsigned Reg, MachineInstr *Def, MachineRegisterInfo &MRI,
   const VNInfo *DefVNI =
       LI.getVNInfoAt(LIS.getInstructionIndex(*Def).getRegSlot());
   assert(DefVNI);
-  for (auto &I : MRI.use_nodbg_operands(Reg)) {
+  for (auto &I : MRI.use_operands(Reg)) {
     const auto &Result = LI.Query(LIS.getInstructionIndex(*I.getParent()));
     if (Result.valueIn() == DefVNI) {
       if (!Result.isKill())
@@ -443,7 +443,7 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
   const MachineInstr *OneUseInst = OneUse.getParent();
   VNInfo *OneUseVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*OneUseInst));
 
-  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
+  for (const MachineOperand &Use : MRI.use_operands(Reg)) {
     if (&Use == &OneUse)
       continue;
 
@@ -475,8 +475,8 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         if (!Register::isVirtualRegister(DefReg) ||
             !MFI.isVRegStackified(DefReg))
           return false;
-        assert(MRI.hasOneNonDBGUse(DefReg));
-        const MachineOperand &NewUse = *MRI.use_nodbg_begin(DefReg);
+        assert(MRI.hasOneUse(DefReg));
+        const MachineOperand &NewUse = *MRI.use_begin(DefReg);
         const MachineInstr *NewUseInst = NewUse.getParent();
         if (NewUseInst == OneUseInst) {
           if (&OneUse > &NewUse)

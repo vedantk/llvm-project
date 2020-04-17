@@ -117,7 +117,7 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
   MBB.insert((MachineBasicBlock::iterator)&Root, MIB);
 
   // Check if MRI has only one non dbg use, which is Root
-  if (MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg())) {
+  if (MRI.hasOneUse(Prev.getOperand(0).getReg())) {
     Prev.eraseFromParentAndMarkDBGValuesForRemoval();
   }
   Root.eraseFromParentAndMarkDBGValuesForRemoval();

@@ -210,7 +210,7 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
       !Register::isVirtualRegister(DstReg))
     return false;
 
-  for (const auto &MO : MRI.reg_nodbg_operands(DstReg)) {
+  for (const auto &MO : MRI.reg_operands(DstReg)) {
     const auto *UseMI = MO.getParent();
     if (UseMI == &MI)
       continue;

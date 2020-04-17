@@ -296,7 +296,7 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
     if (!YmmOrZmmUsed) {
       for (TargetRegisterClass::iterator i = RC->begin(), e = RC->end(); i != e;
            i++) {
-        if (!MRI.reg_nodbg_empty(*i)) {
+        if (!MRI.reg_empty(*i)) {
           YmmOrZmmUsed = true;
           break;
         }

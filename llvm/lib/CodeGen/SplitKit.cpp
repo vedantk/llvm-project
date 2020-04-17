@@ -173,7 +173,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Get use slots form the use-def chain.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (MachineOperand &MO : MRI.use_nodbg_operands(CurLI->reg))
+  for (MachineOperand &MO : MRI.use_operands(CurLI->reg))
     if (!MO.isUndef())
       UseSlots.push_back(LIS.getInstructionIndex(*MO.getParent()).getRegSlot());
 

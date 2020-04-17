@@ -192,7 +192,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (Register::isPhysicalRegister(Reg) || !MRI.use_nodbg_empty(Reg))
+    if (Register::isPhysicalRegister(Reg) || !MRI.use_empty(Reg))
       return false;
   }
   return true;

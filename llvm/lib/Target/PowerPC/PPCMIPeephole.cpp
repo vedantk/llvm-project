@@ -549,7 +549,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           unsigned SplatImm = MI.getOperand(2).getImm();
           if (ShiftOp1 == ShiftOp2) {
             unsigned NewElem = (SplatImm + ShiftImm) & 0x3;
-            if (MRI->hasOneNonDBGUse(ShiftRes)) {
+            if (MRI->hasOneUse(ShiftRes)) {
               LLVM_DEBUG(dbgs() << "Removing redundant shift: ");
               LLVM_DEBUG(DefMI->dump());
               ToErase = DefMI;
@@ -594,7 +594,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           auto removeFRSPIfPossible = [&](MachineInstr *RoundInstr) {
             unsigned Opc = RoundInstr->getOpcode();
             if ((Opc == PPC::FRSP || Opc == PPC::XSRSP) &&
-                MRI->hasOneNonDBGUse(RoundInstr->getOperand(0).getReg())) {
+                MRI->hasOneUse(RoundInstr->getOperand(0).getReg())) {
               Simplified = true;
               Register ConvReg1 = RoundInstr->getOperand(1).getReg();
               Register FRSPDefines = RoundInstr->getOperand(0).getReg();
@@ -638,7 +638,7 @@ bool PPCMIPeephole::simplifyCode(void) {
         // just do a sign-extending load.
         if (SrcMI->getOpcode() == PPC::LHZ ||
             SrcMI->getOpcode() == PPC::LHZX) {
-          if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
+          if (!MRI->hasOneUse(SrcMI->getOperand(0).getReg()))
             break;
           auto is64Bit = [] (unsigned Opcode) {
             return Opcode == PPC::EXTSH8;
@@ -682,7 +682,7 @@ bool PPCMIPeephole::simplifyCode(void) {
         // just do a sign-extending load.
         if (SrcMI->getOpcode() == PPC::LWZ ||
             SrcMI->getOpcode() == PPC::LWZX) {
-          if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
+          if (!MRI->hasOneUse(SrcMI->getOperand(0).getReg()))
             break;
           auto is64Bit = [] (unsigned Opcode) {
             return Opcode == PPC::EXTSW || Opcode == PPC::EXTSW_32_64;
@@ -787,7 +787,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           MachineInstr *DefPhiMI = getVRegDefOrNull(PhiOp, MRI);
 
           return DefPhiMI && (DefPhiMI->getOpcode() == PPC::PHI) &&
-                 MRI->hasOneNonDBGUse(DefPhiMI->getOperand(0).getReg());
+                 MRI->hasOneUse(DefPhiMI->getOperand(0).getReg());
         };
 
         auto dominatesAllSingleUseLIs = [&](MachineOperand *DominatorOp,
@@ -804,7 +804,7 @@ bool PPCMIPeephole::simplifyCode(void) {
                 getVRegDefOrNull(&DefPhiMI->getOperand(i), MRI);
             if (!LiMI ||
                 (LiMI->getOpcode() != PPC::LI && LiMI->getOpcode() != PPC::LI8)
-                || !MRI->hasOneNonDBGUse(LiMI->getOperand(0).getReg()) ||
+                || !MRI->hasOneUse(LiMI->getOperand(0).getReg()) ||
                 !MDT->dominates(DefDomMI, LiMI))
               return false;
           }
@@ -1008,7 +1008,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           // is not RLWINMO or RLWINM8o), it's safe to delete its def SrcMI.
           // Otherwise keep it.
           ++NumRotatesCollapsed;
-          if (MRI->use_nodbg_empty(FoldingReg) && !SrcMI->hasImplicitDef()) {
+          if (MRI->use_empty(FoldingReg) && !SrcMI->hasImplicitDef()) {
             ToErase = SrcMI;
             LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
             LLVM_DEBUG(SrcMI->dump());
@@ -1160,7 +1160,7 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
         (*BII).getOperand(1).isReg()) {
       // We optimize only if the condition code is used only by one BCC.
       Register CndReg = (*BII).getOperand(1).getReg();
-      if (!Register::isVirtualRegister(CndReg) || !MRI->hasOneNonDBGUse(CndReg))
+      if (!Register::isVirtualRegister(CndReg) || !MRI->hasOneUse(CndReg))
         return false;
 
       MachineInstr *CMPI = MRI->getVRegDef(CndReg);
@@ -1634,7 +1634,7 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 
   // If the register defined by extsw has more than one use, combination is not
   // needed.
-  if (!MRI->hasOneNonDBGUse(SrcReg))
+  if (!MRI->hasOneUse(SrcReg))
     return false;
 
   assert(SrcMI->getNumOperands() == 2 && "EXTSW should have 2 operands");

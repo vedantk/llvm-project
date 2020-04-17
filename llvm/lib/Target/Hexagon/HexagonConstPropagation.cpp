@@ -793,7 +793,7 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
 void MachineConstPropagator::visitUsesOf(unsigned Reg) {
   LLVM_DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
                     << Cells.get(Reg) << '\n');
-  for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
+  for (MachineInstr &MI : MRI->use_instructions(Reg)) {
     // Do not process non-executable instructions. They can become exceutable
     // later (via a flow-edge in the work queue). In such case, the instruc-
     // tion will be visited at that time.

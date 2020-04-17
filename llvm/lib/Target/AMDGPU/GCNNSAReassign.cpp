@@ -200,7 +200,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
       if (Def && Def->isCopy() && Def->getOperand(1).getReg() == PhysReg)
         return NSA_Status::FIXED;
 
-      for (auto U : MRI->use_nodbg_operands(Reg)) {
+      for (auto U : MRI->use_operands(Reg)) {
         if (U.isImplicit())
           return NSA_Status::FIXED;
         const MachineInstr *UseInst = U.getParent();

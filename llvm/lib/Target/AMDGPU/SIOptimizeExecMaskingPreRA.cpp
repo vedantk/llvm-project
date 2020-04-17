@@ -175,7 +175,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
 
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  if ((Register::isVirtualRegister(CmpReg) && MRI.use_nodbg_empty(CmpReg)) ||
+  if ((Register::isVirtualRegister(CmpReg) && MRI.use_empty(CmpReg)) ||
       (CmpReg == CondReg &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
                     [&](const MachineInstr &MI) {
@@ -187,7 +187,7 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
     Cmp->eraseFromParent();
 
     // Try to remove v_cndmask_b32.
-    if (Register::isVirtualRegister(SelReg) && MRI.use_nodbg_empty(SelReg)) {
+    if (Register::isVirtualRegister(SelReg) && MRI.use_empty(SelReg)) {
       LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
 
       LIS->RemoveMachineInstrFromMaps(*Sel);
@@ -300,8 +300,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       Register SavedExec = I->getOperand(0).getReg();
-      if (SavedExec.isVirtual() && MRI.hasOneNonDBGUse(SavedExec) &&
-          MRI.use_instr_nodbg_begin(SavedExec)->getParent() == I->getParent()) {
+      if (SavedExec.isVirtual() && MRI.hasOneUse(SavedExec) &&
+          MRI.use_instr_begin(SavedExec)->getParent() == I->getParent()) {
         LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
         LIS->RemoveMachineInstrFromMaps(*I);
         I->eraseFromParent();

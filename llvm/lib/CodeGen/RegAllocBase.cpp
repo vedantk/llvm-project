@@ -74,7 +74,7 @@ void RegAllocBase::seedLiveRegs() {
                      TimerGroupDescription, TimePassesIsEnabled);
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_empty(Reg))
       continue;
     enqueue(&LIS->getInterval(Reg));
   }
@@ -90,7 +90,7 @@ void RegAllocBase::allocatePhysRegs() {
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
     // Unused registers can appear when the spiller coalesces snippets.
-    if (MRI->reg_nodbg_empty(VirtReg->reg)) {
+    if (MRI->reg_empty(VirtReg->reg)) {
       LLVM_DEBUG(dbgs() << "Dropping unused " << *VirtReg << '\n');
       aboutToRemoveInterval(*VirtReg);
       LIS->removeInterval(VirtReg->reg);
@@ -146,7 +146,7 @@ void RegAllocBase::allocatePhysRegs() {
 
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
-      if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
+      if (MRI->reg_empty(SplitVirtReg->reg)) {
         assert(SplitVirtReg->empty() && "Non-empty but used interval");
         LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);

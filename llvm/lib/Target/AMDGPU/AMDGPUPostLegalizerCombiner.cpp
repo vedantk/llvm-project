@@ -50,7 +50,7 @@ static bool matchFMinFMaxLegacy(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
+  if (!MRI.hasOneUse(Cond) ||
       !mi_match(Cond, MRI,
                 m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
     return false;

@@ -172,7 +172,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
 
         // If an address has only one use then there will be on other
         // instructions with the same address, so we can't merge this one.
-        if (MRI.hasOneNonDBGUse(AddrOp->getReg()))
+        if (MRI.hasOneUse(AddrOp->getReg()))
           return false;
       }
       return true;

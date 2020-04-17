@@ -98,7 +98,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
     unsigned Reg = Register::index2VirtReg(I);
 
     // Skip unused registers.
-    if (MRI.use_nodbg_empty(Reg))
+    if (MRI.use_empty(Reg))
       continue;
 
     // Skip registers that have an ARGUMENT definition.

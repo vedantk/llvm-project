@@ -87,7 +87,7 @@ bool SystemZRegisterInfo::getRegAllocationHints(
   if (VRM != nullptr) {
     // Add any two address hints after any copy hints.
     SmallSet<unsigned, 4> TwoAddrHints;
-    for (auto &Use : MRI->reg_nodbg_instructions(VirtReg))
+    for (auto &Use : MRI->reg_instructions(VirtReg))
       if (SystemZ::getTwoOperandOpcode(Use.getOpcode()) != -1) {
         const MachineOperand *VRRegMO = nullptr;
         const MachineOperand *OtherMO = nullptr;

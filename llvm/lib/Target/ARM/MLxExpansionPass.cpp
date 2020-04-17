@@ -115,19 +115,19 @@ MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
 
 unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
   Register Reg = MI->getOperand(0).getReg();
-  if (Register::isPhysicalRegister(Reg) || !MRI->hasOneNonDBGUse(Reg))
+  if (Register::isPhysicalRegister(Reg) || !MRI->hasOneUse(Reg))
     return Reg;
 
   MachineBasicBlock *MBB = MI->getParent();
-  MachineInstr *UseMI = &*MRI->use_instr_nodbg_begin(Reg);
+  MachineInstr *UseMI = &*MRI->use_instr_begin(Reg);
   if (UseMI->getParent() != MBB)
     return Reg;
 
   while (UseMI->isCopy() || UseMI->isInsertSubreg()) {
     Reg = UseMI->getOperand(0).getReg();
-    if (Register::isPhysicalRegister(Reg) || !MRI->hasOneNonDBGUse(Reg))
+    if (Register::isPhysicalRegister(Reg) || !MRI->hasOneUse(Reg))
       return Reg;
-    UseMI = &*MRI->use_instr_nodbg_begin(Reg);
+    UseMI = &*MRI->use_instr_begin(Reg);
     if (UseMI->getParent() != MBB)
       return Reg;
   }
@@ -298,7 +298,7 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
     .addReg(DstReg, getDefRegState(true) | getDeadRegState(DstDead));
 
   if (NegAcc) {
-    bool AccKill = MRI->hasOneNonDBGUse(AccReg);
+    bool AccKill = MRI->hasOneUse(AccReg);
     MIB.addReg(TmpReg, getKillRegState(true))
        .addReg(AccReg, getKillRegState(AccKill));
   } else {

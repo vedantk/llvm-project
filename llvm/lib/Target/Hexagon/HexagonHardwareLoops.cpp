@@ -1040,16 +1040,16 @@ bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (MRI->use_nodbg_empty(Reg))
+    if (MRI->use_empty(Reg))
       continue;
 
-    using use_nodbg_iterator = MachineRegisterInfo::use_nodbg_iterator;
+    using use_iterator = MachineRegisterInfo::use_iterator;
 
     // This instruction has users, but if the only user is the phi node for the
     // parent block, and the only use of that phi node is this instruction, then
     // this instruction is dead: both it (and the phi node) can be removed.
-    use_nodbg_iterator I = MRI->use_nodbg_begin(Reg);
-    use_nodbg_iterator End = MRI->use_nodbg_end();
+    use_iterator I = MRI->use_begin(Reg);
+    use_iterator End = MRI->use_end();
     if (std::next(I) != End || !I->getParent()->isPHI())
       return false;
 
@@ -1060,8 +1060,8 @@ bool HexagonHardwareLoops::isDead(const MachineInstr *MI,
         continue;
 
       Register OPReg = OPO.getReg();
-      use_nodbg_iterator nextJ;
-      for (use_nodbg_iterator J = MRI->use_nodbg_begin(OPReg);
+      use_iterator nextJ;
+      for (use_iterator J = MRI->use_begin(OPReg);
            J != End; J = nextJ) {
         nextJ = std::next(J);
         MachineOperand &Use = *J;
@@ -1452,8 +1452,8 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
   // Iterate over the uses of the initial value. If the initial value is used
   // in a compare, then we assume this is a range check that ensures the loop
   // doesn't underflow. This is not an exact test and should be improved.
-  for (MachineRegisterInfo::use_instr_nodbg_iterator I = MRI->use_instr_nodbg_begin(Reg),
-         E = MRI->use_instr_nodbg_end(); I != E; ++I) {
+  for (MachineRegisterInfo::use_instr_iterator I = MRI->use_instr_begin(Reg),
+         E = MRI->use_instr_end(); I != E; ++I) {
     MachineInstr *MI = &*I;
     Register CmpReg1, CmpReg2;
     int CmpMask = 0, CmpValue = 0;

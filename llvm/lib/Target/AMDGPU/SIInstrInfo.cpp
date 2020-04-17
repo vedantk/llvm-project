@@ -2463,7 +2463,7 @@ static void removeModOperands(MachineInstr &MI) {
 
 bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
-  if (!MRI->hasOneNonDBGUse(Reg))
+  if (!MRI->hasOneUse(Reg))
     return false;
 
   switch (DefMI.getOpcode()) {
@@ -2572,7 +2572,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->hasOneUse(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
@@ -2655,7 +2655,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // constant and SGPR are illegal.
       legalizeOperands(UseMI);
 
-      bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+      bool DeleteDef = MRI->hasOneUse(Reg);
       if (DeleteDef)
         DefMI.eraseFromParent();
 
@@ -6695,7 +6695,7 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   const int MaxUseInstScan = 10;
   int NumUseInst = 0;
 
-  for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
+  for (auto &UseInst : MRI.use_instructions(VReg)) {
     // Don't bother searching between blocks, although it is possible this block
     // doesn't modify exec.
     if (UseInst.getParent() != DefBB)

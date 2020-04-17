@@ -200,7 +200,7 @@ bool LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
 void LiveIntervals::computeVirtRegs() {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_empty(Reg))
       continue;
     LiveInterval &LI = createEmptyInterval(Reg);
     bool NeedSplit = computeVirtRegInterval(LI);
@@ -557,7 +557,7 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg) {
 
   // Visit all instructions reading Reg.
   SlotIndex LastIdx;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+  for (MachineOperand &MO : MRI->use_operands(Reg)) {
     // Skip "undef" uses.
     if (!MO.readsReg())
       continue;
@@ -698,7 +698,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_empty(Reg))
       continue;
     const LiveInterval &LI = getInterval(Reg);
     if (LI.empty())
@@ -1410,7 +1410,7 @@ private:
                               LaneBitmask LaneMask) {
     if (Register::isVirtualRegister(Reg)) {
       SlotIndex LastUse = Before;
-      for (MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+      for (MachineOperand &MO : MRI.use_operands(Reg)) {
         if (MO.isUndef())
           continue;
         unsigned SubReg = MO.getSubReg();

@@ -187,7 +187,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   MachineInstr *DefMI = nullptr, *UseMI = nullptr;
 
   // Check that there is a single def and a single use.
-  for (MachineOperand &MO : MRI.reg_nodbg_operands(LI->reg)) {
+  for (MachineOperand &MO : MRI.reg_operands(LI->reg)) {
     MachineInstr *MI = MO.getParent();
     if (MO.isDef()) {
       if (DefMI && DefMI != MI)
@@ -325,7 +325,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
     // PIC base register that has lots of uses everywhere.
     // Always shrink COPY uses that probably come from live range splitting.
     if ((MI->readsVirtualRegister(Reg) && (MI->isCopy() || MOI->isDef())) ||
-        (MOI->readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, *MOI))))
+        (MOI->readsReg() && (MRI.hasOneUse(Reg) || useIsKill(LI, *MOI))))
       ToShrink.insert(&LI);
 
     // Remove defined value.
@@ -383,7 +383,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
   // uses around. Keep the empty live range in that case.
   for (unsigned i = 0, e = RegsToErase.size(); i != e; ++i) {
     unsigned Reg = RegsToErase[i];
-    if (LIS.hasInterval(Reg) && MRI.reg_nodbg_empty(Reg)) {
+    if (LIS.hasInterval(Reg) && MRI.reg_empty(Reg)) {
       ToShrink.remove(&LIS.getInterval(Reg));
       eraseVirtReg(Reg);
     }

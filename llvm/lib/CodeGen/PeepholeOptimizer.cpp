@@ -465,7 +465,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
   if (DstReg.isPhysical() || SrcReg.isPhysical())
     return false;
 
-  if (MRI->hasOneNonDBGUse(SrcReg))
+  if (MRI->hasOneUse(SrcReg))
     // No other uses.
     return false;
 
@@ -487,7 +487,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
   // The source has other uses. See if we can replace the other uses with use of
   // the result of the extension.
   SmallPtrSet<MachineBasicBlock*, 4> ReachedBBs;
-  for (MachineInstr &UI : MRI->use_nodbg_instructions(DstReg))
+  for (MachineInstr &UI : MRI->use_instructions(DstReg))
     ReachedBBs.insert(UI.getParent());
 
   // Uses that are in the same BB of uses of the result of the instruction.
@@ -497,7 +497,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
   SmallVector<MachineOperand*, 8> ExtendedUses;
 
   bool ExtendLife = true;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(SrcReg)) {
+  for (MachineOperand &UseMO : MRI->use_operands(SrcReg)) {
     MachineInstr *UseMI = UseMO.getParent();
     if (UseMI == &MI)
       continue;
@@ -564,7 +564,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
     // Look for PHI uses of the extended result, we don't want to extend the
     // liveness of a PHI input. It breaks all kinds of assumptions down
     // stream. A PHI use is expected to be the kill of its source values.
-    for (MachineInstr &UI : MRI->use_nodbg_instructions(DstReg))
+    for (MachineInstr &UI : MRI->use_instructions(DstReg))
       if (UI.isPHI())
         PHIBBs.insert(UI.getParent());
 
@@ -1316,11 +1316,11 @@ bool PeepholeOptimizer::isLoadFoldable(
     return false;
 
   Register Reg = MI.getOperand(0).getReg();
-  // To reduce compilation time, we check MRI->hasOneNonDBGUser when inserting
+  // To reduce compilation time, we check MRI->hasOneUser when inserting
   // loads. It should be checked when processing uses of the load, since
   // uses can be removed during peephole.
   if (!MI.getOperand(0).getSubReg() && Register::isVirtualRegister(Reg) &&
-      MRI->hasOneNonDBGUser(Reg)) {
+      MRI->hasOneUser(Reg)) {
     FoldAsLoadDefCandidates.insert(Reg);
     return true;
   }
@@ -1502,14 +1502,14 @@ bool PeepholeOptimizer::findTargetRecurrence(
   // one uses to guarantee that commuting operands does not tie registers
   // with overlapping live range. Once we have actual live range info of
   // each register, this constraint can be relaxed.
-  if (!MRI->hasOneNonDBGUse(Reg))
+  if (!MRI->hasOneUse(Reg))
     return false;
 
   // Give up if the reccurrence chain length is longer than the limit.
   if (RC.size() >= MaxRecurrenceChain)
     return false;
 
-  MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
+  MachineInstr &MI = *(MRI->use_instr_begin(Reg));
   unsigned Idx = MI.findRegisterUseOperandIdx(Reg);
 
   // Only interested in recurrences whose instructions have only one def, which
@@ -1865,7 +1865,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
 
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
-  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(DefOp.getReg())) {
+  for (const MachineInstr &UseMI : MRI.use_instructions(DefOp.getReg())) {
     if (UseMI.isSubregToReg())
       return ValueTrackerResult();
   }

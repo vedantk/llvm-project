@@ -779,7 +779,7 @@ void UserValue::addDefsFromCopies(
 
   // Collect all the (vreg, valno) pairs that are copies of LI.
   SmallVector<std::pair<LiveInterval*, const VNInfo*>, 8> CopyValues;
-  for (MachineOperand &MO : MRI.use_nodbg_operands(LI->reg)) {
+  for (MachineOperand &MO : MRI.use_operands(LI->reg)) {
     MachineInstr *MI = MO.getParent();
     // Copies of the full value.
     if (MO.getSubReg() || !MI->isCopy())

@@ -458,7 +458,7 @@ static MachineInstr *canFoldIntoSelect(Register Reg,
                                        const MachineRegisterInfo &MRI) {
   if (!Reg.isVirtual())
     return nullptr;
-  if (!MRI.hasOneNonDBGUse(Reg))
+  if (!MRI.hasOneUse(Reg))
     return nullptr;
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)

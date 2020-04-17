@@ -416,7 +416,7 @@ LaneBitmask DetectDeadLanes::determineInitialDefinedLanes(unsigned Reg) {
 
 LaneBitmask DetectDeadLanes::determineInitialUsedLanes(unsigned Reg) {
   LaneBitmask UsedLanes = LaneBitmask::getNone();
-  for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+  for (const MachineOperand &MO : MRI->use_operands(Reg)) {
     if (!MO.readsReg())
       continue;
 
@@ -515,7 +515,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
     const MachineInstr &MI = *Def.getParent();
     transferUsedLanesStep(MI, Info.UsedLanes);
     // Transfer DefinedLanes to users of Reg (forward dataflow).
-    for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg))
+    for (const MachineOperand &MO : MRI->use_operands(Reg))
       transferDefinedLanesStep(MO, Info.DefinedLanes);
   }
 

@@ -473,9 +473,9 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
                                            Ret.SubregDef1, Ret.CopyDefs.first);
     assert(Def1 && "Must be able to find a definition of operand 1.");
     Ret.DefsSingleUse &=
-      MRI->hasOneNonDBGUse(Def1->getOperand(0).getReg());
+      MRI->hasOneUse(Def1->getOperand(0).getReg());
     Ret.DefsSingleUse &=
-      MRI->hasOneNonDBGUse(Ret.CopyDefs.first->getOperand(0).getReg());
+      MRI->hasOneUse(Ret.CopyDefs.first->getOperand(0).getReg());
     if (isBinary(MIParam)) {
       Ret.IsBinary = 1;
       MachineInstr *Def2 = lookThroughCRCopy(MIParam.getOperand(2).getReg(),
@@ -483,9 +483,9 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
                                              Ret.CopyDefs.second);
       assert(Def2 && "Must be able to find a definition of operand 2.");
       Ret.DefsSingleUse &=
-        MRI->hasOneNonDBGUse(Def2->getOperand(0).getReg());
+        MRI->hasOneUse(Def2->getOperand(0).getReg());
       Ret.DefsSingleUse &=
-        MRI->hasOneNonDBGUse(Ret.CopyDefs.second->getOperand(0).getReg());
+        MRI->hasOneUse(Ret.CopyDefs.second->getOperand(0).getReg());
       Ret.TrueDefs = std::make_pair(Def1, Def2);
     } else {
       Ret.TrueDefs = std::make_pair(Def1, nullptr);
@@ -496,7 +496,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
   Ret.ContainedInBlock = 1;
   // Get the uses
   for (MachineInstr &UseMI :
-       MRI->use_nodbg_instructions(MIParam.getOperand(0).getReg())) {
+       MRI->use_instructions(MIParam.getOperand(0).getReg())) {
     unsigned Opc = UseMI.getOpcode();
     if (Opc == PPC::ISEL || Opc == PPC::ISEL8)
       Ret.FeedsISEL = 1;
@@ -507,7 +507,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
     if (UseMI.getParent() != MIParam.getParent())
       Ret.ContainedInBlock = 0;
   }
-  Ret.SingleUse = MRI->hasOneNonDBGUse(MIParam.getOperand(0).getReg()) ? 1 : 0;
+  Ret.SingleUse = MRI->hasOneUse(MIParam.getOperand(0).getReg()) ? 1 : 0;
 
   // We now know whether all the uses of the CR logical are in the same block.
   if (!Ret.IsNullary) {
@@ -655,7 +655,7 @@ bool PPCReduceCRLogicals::splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI) {
 
   // Get the branch instruction.
   MachineInstr *Branch =
-    MRI->use_nodbg_begin(CRI.MI->getOperand(0).getReg())->getParent();
+    MRI->use_begin(CRI.MI->getOperand(0).getReg())->getParent();
 
   // We want the new block to have no code in it other than the definition
   // of the input to the CR logical and the CR logical itself. So we move

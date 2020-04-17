@@ -2108,7 +2108,7 @@ bool TargetLoweringBase::shouldLocalize(const MachineInstr &MI,
   // us spending time traversing uses if all we want to know is if it's >= min.
   auto isUsesAtMost = [&](unsigned Reg, unsigned MaxUses) {
     unsigned NumUses = 0;
-    auto UI = MRI.use_instr_nodbg_begin(Reg), UE = MRI.use_instr_nodbg_end();
+    auto UI = MRI.use_instr_begin(Reg), UE = MRI.use_instr_end();
     for (; UI != UE && NumUses < MaxUses; ++UI) {
       NumUses++;
     }

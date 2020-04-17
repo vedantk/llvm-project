@@ -629,7 +629,7 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   const MachineBasicBlock *CommonMBB = nullptr;
   // Real definition for the reg, re-definitions are not considered.
   const MachineInstr *RealDef = nullptr;
-  for (MachineOperand &MO : MRI.reg_nodbg_operands(VReg)) {
+  for (MachineOperand &MO : MRI.reg_operands(VReg)) {
     MachineBasicBlock *MBB = MO.getParent()->getParent();
     if (CommonMBB == nullptr)
       CommonMBB = MBB;

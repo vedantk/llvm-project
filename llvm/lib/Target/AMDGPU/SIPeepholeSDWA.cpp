@@ -293,7 +293,7 @@ static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
     return nullptr;
 
   MachineOperand *ResMO = nullptr;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg->getReg())) {
+  for (MachineOperand &UseMO : MRI->use_operands(Reg->getReg())) {
     // If there exist use of subreg of Reg then return nullptr
     if (!isSameReg(UseMO, *Reg))
       return nullptr;
@@ -447,7 +447,7 @@ MachineInstr *SDWADstOperand::potentialToConvert(const SIInstrInfo *TII) {
     return nullptr;
 
   // Check that ParentMI is the only instruction that uses replaced register
-  for (MachineInstr &UseInst : MRI->use_nodbg_instructions(PotentialMO->getReg())) {
+  for (MachineInstr &UseInst : MRI->use_instructions(PotentialMO->getReg())) {
     if (&UseInst != ParentMI)
       return nullptr;
   }

@@ -264,7 +264,7 @@ bool SSACCmpConv::isDeadDef(unsigned DstReg) {
     return false;
   // A virtual register def without any uses will be marked dead later, and
   // eventually replaced by the zero register.
-  return MRI->use_nodbg_empty(DstReg);
+  return MRI->use_empty(DstReg);
 }
 
 // Parse a condition code returned by analyzeBranch, and compute the CondCode

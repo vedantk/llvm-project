@@ -540,9 +540,9 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
       if (!isPotentialBlockedMemCpyLd(MI.getOpcode()))
         continue;
       int DefVR = MI.getOperand(0).getReg();
-      if (!MRI->hasOneNonDBGUse(DefVR))
+      if (!MRI->hasOneUse(DefVR))
         continue;
-      for (auto UI = MRI->use_nodbg_begin(DefVR), UE = MRI->use_nodbg_end();
+      for (auto UI = MRI->use_begin(DefVR), UE = MRI->use_end();
            UI != UE;) {
         MachineOperand &StoreMO = *UI++;
         MachineInstr &StoreMI = *StoreMO.getParent();
