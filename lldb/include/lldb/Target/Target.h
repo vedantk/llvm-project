@@ -31,6 +31,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Telemetry.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -1335,23 +1336,14 @@ protected:
 
   // Utilities for `statistics` command.
 private:
-  std::vector<uint32_t> m_stats_storage;
-  bool m_collecting_stats = false;
+  Telemetry m_telemetry;
 
 public:
-  void SetCollectingStats(bool v) { m_collecting_stats = v; }
+  void SetCollectingStats(bool v) { m_telemetry.SetEnabled(v); }
 
-  bool GetCollectingStats() { return m_collecting_stats; }
+  bool GetCollectingStats() { return m_telemetry.IsEnabled(); }
 
-  void IncrementStats(lldb_private::StatisticKind key) {
-    if (!GetCollectingStats())
-      return;
-    lldbassert(key < lldb_private::StatisticKind::StatisticMax &&
-               "invalid statistics!");
-    m_stats_storage[key] += 1;
-  }
-
-  std::vector<uint32_t> GetStatistics() { return m_stats_storage; }
+  Telemetry &GetTelemetry() { return m_telemetry; }
 
 private:
   /// Construct with optional file and arch.

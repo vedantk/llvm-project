@@ -707,10 +707,9 @@ protected:
     // Increment statistics.
     bool res = result.Succeeded();
     Target &target = GetSelectedOrDummyTarget();
-    if (res)
-      target.IncrementStats(StatisticKind::FrameVarSuccess);
-    else
-      target.IncrementStats(StatisticKind::FrameVarFailure);
+    Telemetry &telemetry = target.GetTelemetry();
+    telemetry.Record(res ? Statistic::FrameVarSuccess
+                         : Statistic::FrameVarFailure);
     return res;
   }
 

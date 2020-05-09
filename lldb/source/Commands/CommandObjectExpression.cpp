@@ -649,6 +649,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
   }
 
   Target &target = GetSelectedOrDummyTarget();
+  Telemetry &telemetry = target.GetTelemetry();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 
@@ -666,13 +667,11 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
         fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
-    // Increment statistics to record this expression evaluation success.
-    target.IncrementStats(StatisticKind::ExpressionSuccessful);
+    telemetry.Record(Statistic::ExpressionSuccess);
     return true;
   }
 
-  // Increment statistics to record this expression evaluation failure.
-  target.IncrementStats(StatisticKind::ExpressionFailure);
+  telemetry.Record(Statistic::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

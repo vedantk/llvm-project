@@ -130,6 +130,8 @@ module lldb_Utility {
   umbrella "Utility"
   module * { export * }
 
+  textual header "Utility/Statistics.def"
+
   module lldb_defines { header "lldb-defines.h" export * }
   module lldb_enumerations { header "lldb-enumerations.h" export * }
   module lldb_forward { header "lldb-forward.h" export * }

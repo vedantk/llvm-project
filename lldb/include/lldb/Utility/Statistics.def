@@ -1,0 +1,18 @@
+//===-- Statistics.def ------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_STATISTIC_DEF
+#error "Must define LLDB_STATISTIC_DEF(EnumName, Desc)."
+#endif
+
+LLDB_STATISTIC_DEF(ExpressionSuccess, "Number of expr evaluation successes")
+LLDB_STATISTIC_DEF(ExpressionFailure, "Number of expr evaluation failures")
+LLDB_STATISTIC_DEF(FrameVarSuccess, "Number of frame var successes")
+LLDB_STATISTIC_DEF(FrameVarFailure, "Number of frame var failures")
+
+#undef LLDB_STATISTIC_DEF

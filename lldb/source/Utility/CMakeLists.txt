@@ -49,6 +49,7 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   StringList.cpp
   StructuredData.cpp
+  Telemetry.cpp
   TildeExpressionResolver.cpp
   Timer.cpp
   UUID.cpp

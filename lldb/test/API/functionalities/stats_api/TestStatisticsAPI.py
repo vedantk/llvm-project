@@ -27,7 +27,7 @@ class TestStatsAPI(TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         stats_json = sorted(json.loads(stream.GetData()))
-        self.assertEqual(len(stats_json), 4)
+        self.assertEqual(len(stats_json), 4, stream.GetData())
         self.assertTrue("Number of expr evaluation failures" in stats_json)
         self.assertTrue("Number of expr evaluation successes" in stats_json)
         self.assertTrue("Number of frame var failures" in stats_json)

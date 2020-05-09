@@ -74,17 +74,7 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetSelectedOrDummyTarget();
-
-    uint32_t i = 0;
-    for (auto &stat : target.GetStatistics()) {
-      result.AppendMessageWithFormat(
-          "%s : %u\n",
-          lldb_private::GetStatDescription(
-              static_cast<lldb_private::StatisticKind>(i))
-              .c_str(),
-          stat);
-      i += 1;
-    }
+    target.GetTelemetry().Print(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }
