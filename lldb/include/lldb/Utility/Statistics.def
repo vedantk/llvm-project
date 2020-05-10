@@ -15,5 +15,6 @@ LLDB_STATISTIC_DEF(ExpressionFailure, "Number of expr evaluation failures")
 LLDB_STATISTIC_DEF(FrameVarSuccess, "Number of frame var successes")
 LLDB_STATISTIC_DEF(FrameVarFailure, "Number of frame var failures")
 LLDB_STATISTIC_DEF(AssertionFailure, "Number of lldbassert() failures")
+LLDB_STATISTIC_DEF(SBAPICall, "Number of SBAPI calls")
 
 #undef LLDB_STATISTIC_DEF
