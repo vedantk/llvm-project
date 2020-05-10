@@ -29,6 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Telemetry.h"
 
 #include <memory>
 #include <string>
@@ -706,10 +707,8 @@ protected:
 
     // Increment statistics.
     bool res = result.Succeeded();
-    Target &target = GetSelectedOrDummyTarget();
-    Telemetry &telemetry = target.GetTelemetry();
-    telemetry.Record(res ? Statistic::FrameVarSuccess
-                         : Statistic::FrameVarFailure);
+    GetTelemetry()->Record(res ? Statistic::FrameVarSuccess
+                               : Statistic::FrameVarFailure);
     return res;
   }
 

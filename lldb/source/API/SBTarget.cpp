@@ -62,6 +62,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Telemetry.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -218,7 +219,7 @@ SBStructuredData SBTarget::GetStatistics() {
   if (!target_sp)
     return LLDB_RECORD_RESULT(data);
 
-  data.m_impl_up->SetObjectSP(target_sp->GetTelemetry().GetAsStructuredData());
+  data.m_impl_up->SetObjectSP(GetTelemetry()->GetAsStructuredData());
   return LLDB_RECORD_RESULT(data);
 }
 

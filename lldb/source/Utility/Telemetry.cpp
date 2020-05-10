@@ -17,6 +17,9 @@
 
 namespace lldb_private {
 
+static std::unique_ptr<Telemetry> g_telemetry;
+static std::mutex g_telemetry_lock;
+
 static unsigned GetNumberOfStatistics() {
   return static_cast<unsigned>(Statistic::MaxID);
 }
@@ -77,6 +80,28 @@ Telemetry::GetAsStructuredData() const {
   for (const auto &string_and_count : m_strings)
     stats_up->AddIntegerItem(string_and_count.first, string_and_count.second);
   return stats_up;
+}
+
+void Telemetry::Initialize() {
+  g_telemetry = std::make_unique<Telemetry>();
+}
+
+void Telemetry::Terminate() {
+  g_telemetry.reset();
+}
+
+ExclusivelyLockedTelemetry::ExclusivelyLockedTelemetry() {
+  m_guard = std::unique_lock<std::mutex>(g_telemetry_lock);
+}
+
+ExclusivelyLockedTelemetry::~ExclusivelyLockedTelemetry() {}
+
+Telemetry *ExclusivelyLockedTelemetry::operator->() const {
+  return g_telemetry.get();
+}
+
+ExclusivelyLockedTelemetry GetTelemetry() {
+  return ExclusivelyLockedTelemetry();
 }
 
 } // namespace lldb_private

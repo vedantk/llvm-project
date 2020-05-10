@@ -20,6 +20,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Telemetry.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -649,7 +650,6 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
   }
 
   Target &target = GetSelectedOrDummyTarget();
-  Telemetry &telemetry = target.GetTelemetry();
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 
@@ -667,11 +667,11 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
         fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
-    telemetry.Record(Statistic::ExpressionSuccess);
+    GetTelemetry()->Record(Statistic::ExpressionSuccess);
     return true;
   }
 
-  telemetry.Record(Statistic::ExpressionFailure);
+  GetTelemetry()->Record(Statistic::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

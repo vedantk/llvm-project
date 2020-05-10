@@ -1334,16 +1334,10 @@ protected:
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
 
-  // Utilities for `statistics` command.
-private:
-  Telemetry m_telemetry;
-
 public:
-  void SetCollectingStats(bool v) { m_telemetry.SetEnabled(v); }
+  void SetCollectingStats(bool v) { GetTelemetry()->SetEnabled(v); }
 
-  bool GetCollectingStats() { return m_telemetry.IsEnabled(); }
-
-  Telemetry &GetTelemetry() { return m_telemetry; }
+  bool GetCollectingStats() { return GetTelemetry()->IsEnabled(); }
 
 private:
   /// Construct with optional file and arch.

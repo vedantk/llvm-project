@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/StructuredData.h"
 
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -42,11 +43,40 @@ public:
 
   std::unique_ptr<StructuredData::Dictionary> GetAsStructuredData() const;
 
+  /// Used by \ref SystemInitializerFull to set up telemetry.
+  static void Initialize();
+
+  /// Used by \ref SystemInitializerFull to tear down telemetry.
+  static void Terminate();
+
 private:
   std::vector<unsigned> m_counters;
   std::unordered_map<const char *, unsigned> m_strings;
   bool m_collecting_stats = false;
 };
+
+/// RAII helper which acquires an exlusive lock on the global Telemetry
+/// singleton on construction, and releases the lock on destruction.
+class ExclusivelyLockedTelemetry {
+public:
+  ExclusivelyLockedTelemetry();
+
+  ~ExclusivelyLockedTelemetry();
+
+  ExclusivelyLockedTelemetry(ExclusivelyLockedTelemetry &&) = default;
+
+  ExclusivelyLockedTelemetry &
+  operator=(ExclusivelyLockedTelemetry &&) = default;
+
+  Telemetry *operator->() const;
+
+private:
+  std::unique_lock<std::mutex> m_guard;
+};
+
+/// Get a reference to the global Telemetry singleton. This has UB when called
+/// without first calling \ref Telemetry::Initialize.
+ExclusivelyLockedTelemetry GetTelemetry();
 
 }
 
