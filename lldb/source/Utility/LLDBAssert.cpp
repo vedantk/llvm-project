@@ -11,6 +11,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "lldb/Utility/Telemetry.h"
 
 using namespace llvm;
 using namespace lldb_private;
@@ -23,6 +24,9 @@ void lldb_private::lldb_assert(bool expression, const char *expr_text,
 
   // If asserts are enabled abort here.
   assert(false && "lldb_assert failed");
+
+  // If telemetry is enabled, record the assertion failure.
+  GetTelemetry()->RecordWithString(Statistic::AssertionFailure, expr_text);
 
   // In a release configuration it will print a warning and encourage the user
   // to file a bug report, similar to LLVM’s crash handler, and then return

@@ -9,6 +9,14 @@
 #ifndef LLDB_UTILITY_LLDBASSERT_H
 #define LLDB_UTILITY_LLDBASSERT_H
 
+// lldbassert(x):
+//
+// In Debug mode, this is just a regular assert. However, code should NOT
+// assume that the asserted condition is actually true.
+//
+// In Release mode, this reports a message to the user. If telemetry is
+// enabled, a counter associated with the assertion text is incremented each
+// time the assertion fails.
 #ifdef LLDB_CONFIGURATION_DEBUG
 #define lldbassert(x) assert(x)
 #else
