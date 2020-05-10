@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/StructuredData.h"
 
+#include <unordered_map>
 #include <vector>
 
 namespace lldb_private {
@@ -35,12 +36,15 @@ public:
 
   void Record(Statistic stat);
 
+  void RecordWithString(Statistic stat, const char *assertion);
+
   void Print(Stream &stream) const;
 
   std::unique_ptr<StructuredData::Dictionary> GetAsStructuredData() const;
 
 private:
   std::vector<unsigned> m_counters;
+  std::unordered_map<const char *, unsigned> m_strings;
   bool m_collecting_stats = false;
 };
 

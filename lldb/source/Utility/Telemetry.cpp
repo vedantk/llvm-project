@@ -50,11 +50,21 @@ void Telemetry::Record(Statistic stat) {
   ++m_counters[GetCounterIndexForStatistic(stat)];
 }
 
+void Telemetry::RecordWithString(Statistic stat, const char *str) {
+  if (!m_collecting_stats)
+    return;
+  Record(stat);
+  ++m_strings[str];
+}
+
 void Telemetry::Print(Stream &stream) const {
   for (unsigned stat_id = 0; stat_id < GetNumberOfStatistics(); ++stat_id) {
     Statistic s = GetStatisticForCounterIndex(stat_id);
     stream.Printf("%s : %u\n", GetStatisticDescription(s), m_counters[stat_id]);
   }
+  for (const auto &string_and_count : m_strings)
+    stream.Printf("Assertion (%s) : %u\n", string_and_count.first,
+                  string_and_count.second);
 }
 
 std::unique_ptr<StructuredData::Dictionary>
@@ -64,6 +74,8 @@ Telemetry::GetAsStructuredData() const {
     Statistic s = GetStatisticForCounterIndex(stat_id);
     stats_up->AddIntegerItem(GetStatisticDescription(s), m_counters[stat_id]);
   }
+  for (const auto &string_and_count : m_strings)
+    stats_up->AddIntegerItem(string_and_count.first, string_and_count.second);
   return stats_up;
 }
 
