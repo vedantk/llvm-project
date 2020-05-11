@@ -36,6 +36,8 @@ llvm::Error SystemInitializerFull::Initialize() {
   if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
+  Telemetry::Initialize();
+
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
@@ -58,6 +60,8 @@ llvm::Error SystemInitializerFull::Initialize() {
 void SystemInitializerFull::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+
+  Telemetry::Terminate();
 
   Debugger::SettingsTerminate();
 

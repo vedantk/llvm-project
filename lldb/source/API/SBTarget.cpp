@@ -62,6 +62,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Telemetry.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -218,16 +219,7 @@ SBStructuredData SBTarget::GetStatistics() {
   if (!target_sp)
     return LLDB_RECORD_RESULT(data);
 
-  auto stats_up = std::make_unique<StructuredData::Dictionary>();
-  int i = 0;
-  for (auto &Entry : target_sp->GetStatistics()) {
-    std::string Desc = lldb_private::GetStatDescription(
-        static_cast<lldb_private::StatisticKind>(i));
-    stats_up->AddIntegerItem(Desc, Entry);
-    i += 1;
-  }
-
-  data.m_impl_up->SetObjectSP(std::move(stats_up));
+  data.m_impl_up->SetObjectSP(GetTelemetry()->GetAsStructuredData());
   return LLDB_RECORD_RESULT(data);
 }
 

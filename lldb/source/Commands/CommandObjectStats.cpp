@@ -8,7 +8,7 @@
 
 #include "CommandObjectStats.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Target/Target.h"
+#include "lldb/Utility/Telemetry.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,15 +24,15 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    ExclusivelyLockedTelemetry telemetry = GetTelemetry();
 
-    if (target.GetCollectingStats()) {
+    if (telemetry->IsEnabled()) {
       result.AppendError("statistics already enabled");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    target.SetCollectingStats(true);
+    telemetry->SetEnabled(true);
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }
@@ -49,15 +49,15 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    ExclusivelyLockedTelemetry telemetry = GetTelemetry();
 
-    if (!target.GetCollectingStats()) {
+    if (!telemetry->IsEnabled()) {
       result.AppendError("need to enable statistics before disabling them");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    target.SetCollectingStats(false);
+    telemetry->SetEnabled(false);
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }
@@ -73,18 +73,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
-
-    uint32_t i = 0;
-    for (auto &stat : target.GetStatistics()) {
-      result.AppendMessageWithFormat(
-          "%s : %u\n",
-          lldb_private::GetStatDescription(
-              static_cast<lldb_private::StatisticKind>(i))
-              .c_str(),
-          stat);
-      i += 1;
-    }
+    GetTelemetry()->Print(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;
   }

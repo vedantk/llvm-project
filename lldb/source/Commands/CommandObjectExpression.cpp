@@ -20,6 +20,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Telemetry.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -666,13 +667,11 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
         fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
-    // Increment statistics to record this expression evaluation success.
-    target.IncrementStats(StatisticKind::ExpressionSuccessful);
+    GetTelemetry()->Record(Statistic::ExpressionSuccess);
     return true;
   }
 
-  // Increment statistics to record this expression evaluation failure.
-  target.IncrementStats(StatisticKind::ExpressionFailure);
+  GetTelemetry()->Record(Statistic::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;
 }

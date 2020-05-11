@@ -93,9 +93,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_image_search_paths(ImageSearchPathsChanged, this),
       m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
       m_valid(true), m_suppress_stop_hooks(false),
-      m_is_dummy_target(is_dummy_target),
-      m_stats_storage(static_cast<int>(StatisticKind::StatisticMax))
-
+      m_is_dummy_target(is_dummy_target)
 {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");

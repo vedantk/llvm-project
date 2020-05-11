@@ -11,6 +11,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
+#include "lldb/Utility/Telemetry.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -121,7 +122,9 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
 #define LLDB_CONSTRUCT_(T, Class, ...)                                         \
   lldb_private::repro::Recorder _recorder(LLVM_PRETTY_FUNCTION);               \
   lldb_private::repro::construct<T>::handle(LLDB_GET_INSTRUMENTATION_DATA(),   \
-                                            _recorder, Class, __VA_ARGS__);
+                                            _recorder, Class, __VA_ARGS__);    \
+  lldb_private::GetTelemetry()->RecordWithString(                              \
+      lldb_private::Statistic::SBAPICall, LLVM_PRETTY_FUNCTION);
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
   LLDB_CONSTRUCT_(Class Signature, this, __VA_ARGS__)
@@ -146,7 +149,9 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
             _recorder, *_deserializer, _data.GetRegistry());                   \
       }                                                                        \
     }                                                                          \
-  }
+  }                                                                            \
+  lldb_private::GetTelemetry()->RecordWithString(                              \
+      lldb_private::Statistic::SBAPICall, LLVM_PRETTY_FUNCTION);
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
   LLDB_RECORD_(Result(Class::*) Signature, (&Class::Method), this, __VA_ARGS__)
@@ -184,7 +189,9 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
             _recorder, *_deserializer, _data.GetRegistry(), StrOut);           \
       }                                                                        \
     }                                                                          \
-  }
+  }                                                                            \
+  lldb_private::GetTelemetry()->RecordWithString(                              \
+      lldb_private::Statistic::SBAPICall, LLVM_PRETTY_FUNCTION);
 
 #define LLDB_RECORD_CHAR_PTR_METHOD(Result, Class, Method, Signature, StrOut,  \
                                     ...)                                       \
