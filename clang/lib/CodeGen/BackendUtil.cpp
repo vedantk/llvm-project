@@ -71,6 +71,7 @@
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
+#include "llvm/Transforms/Instrumentation/ProtectLibcalls.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -352,6 +353,11 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
   const LangOptions &LangOpts = BuilderWrapper.getLangOpts();
   PM.add(
       createDataFlowSanitizerLegacyPassPass(LangOpts.SanitizerBlacklistFiles));
+}
+
+static void addProtectLibcallsPass(const PassManagerBuilder &Builder,
+                                   legacy::PassManagerBase &PM) {
+  PM.add(createProtectLibcallsFunctionPass());
 }
 
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
@@ -728,6 +734,13 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addDataFlowSanitizerPass);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addDataFlowSanitizerPass);
+  }
+
+  if (true /* ProtectLibcalls */) {
+    PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                           addProtectLibcallsPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addProtectLibcallsPass);
   }
 
   // Set up the per-function pass manager.
@@ -1331,6 +1344,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                       /*CompileKernel=*/false, Recover, UseAfterScope)));
             });
       }
+      if (true /* ProtectLibcalls */)
+        PB.registerScalarOptimizerLateEPCallback(
+            [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
+              FPM.addPass(NewPMProtectLibcallsPass());
+            });
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
         PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
           MPM.addPass(GCOVProfilerPass(*Options));

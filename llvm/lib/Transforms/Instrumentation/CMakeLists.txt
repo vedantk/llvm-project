@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMInstrumentation
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp
   PoisonChecking.cpp
+  ProtectLibcalls.cpp
   SanitizerCoverage.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
