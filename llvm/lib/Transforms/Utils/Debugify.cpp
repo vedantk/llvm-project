@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
@@ -126,10 +127,13 @@ bool llvm::applyDebugifyMetadata(
                                   InsertBefore);
     };
 
+    unsigned NextBlock = 0;
     for (BasicBlock &BB : F) {
+      ++NextBlock;
+
       // Attach debug locations.
       for (Instruction &I : BB)
-        I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+        I.setDebugLoc(DILocation::get(Ctx, NextLine++, NextBlock, SP));
 
       if (DebugifyLevel < Level::LocationsAndVariables)
         continue;
@@ -350,6 +354,39 @@ bool checkDebugifyMetadata(Module &M,
       if (!HasBadSize)
         MissingVars.reset(Var - 1);
       HasErrors |= HasBadSize;
+    }
+
+    for (BasicBlock &BB : F) {
+      Instruction *PrevInst = nullptr;
+      DenseMap<MDNode *, std::vector<unsigned>> Scope2Blocks;
+      for (Instruction &I : BB) {
+        if (isa<DbgInfoIntrinsic>(&I))
+          continue;
+        const DebugLoc &DL = I.getDebugLoc();
+        if (!DL || DL.getLine() == 0)
+          continue;
+        MDNode *Scope = DL.getScope();
+        unsigned Block = DL.getCol();
+        std::vector<unsigned> &Blocks = Scope2Blocks[Scope];
+        if (Blocks.empty()) {
+          Blocks.push_back(Block);
+        } else if (Blocks.back() == Block) {
+          continue;
+        } else if (Blocks.back() != Block) {
+          unsigned PrevBlock = Blocks.back();
+          if (find(Blocks, Block) != Blocks.end()) {
+            dbg() << "ERROR: Block transition " << Block << " -> " << PrevBlock
+                  << " -> " << Block << " occurred within a single scope.\n";
+            dbg() << F.getName() << " --";
+            PrevInst->print(dbg());
+            I.print(dbg());
+            dbg() << "\n";
+            HasErrors = true;
+          }
+          Blocks.push_back(Block);
+        }
+        PrevInst = &I;
+      }
     }
   }
 
