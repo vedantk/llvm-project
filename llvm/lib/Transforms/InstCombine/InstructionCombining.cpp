@@ -3305,6 +3305,7 @@ Instruction *InstCombiner::visitFreeze(FreezeInst &I) {
 /// block.
 static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   assert(I->getSingleUndroppableUse() && "Invariants didn't hold!");
+  assert(!isa<DbgInfoIntrinsic>(I) && "Not intended for use with debug insts");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
