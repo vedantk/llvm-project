@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,12 +33,14 @@ class Stmt;
 /// Stores additional source code information like skipped ranges which
 /// is required by the coverage mapping generator and is obtained from
 /// the preprocessor.
-class CoverageSourceInfo : public PPCallbacks {
+class CoverageSourceInfo : public PPCallbacks, public CommentHandler {
   std::vector<SourceRange> SkippedRanges;
 public:
   ArrayRef<SourceRange> getSkippedRanges() const { return SkippedRanges; }
 
   void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override;
+
+  bool HandleComment(Preprocessor &PP, SourceRange Range) override;
 };
 
 namespace CodeGen {
@@ -66,6 +69,8 @@ class CoverageMappingModuleGen {
                                  uint64_t FilenamesRef);
 
 public:
+  static CoverageSourceInfo *setUpCoverageCallbacks(Preprocessor &PP);
+
   CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)
       : CGM(CGM), SourceInfo(SourceInfo) {}
 

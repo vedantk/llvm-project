@@ -35,8 +35,21 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm::coverage;
 
+CoverageSourceInfo *
+CoverageMappingModuleGen::setUpCoverageCallbacks(Preprocessor &PP) {
+  CoverageSourceInfo *CoverageInfo = new CoverageSourceInfo;
+  PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(CoverageInfo));
+  PP.addCommentHandler(CoverageInfo);
+  return CoverageInfo;
+}
+
 void CoverageSourceInfo::SourceRangeSkipped(SourceRange Range, SourceLocation) {
   SkippedRanges.push_back(Range);
+}
+
+bool CoverageSourceInfo::HandleComment(Preprocessor &, SourceRange Range) {
+  SkippedRanges.push_back(Range);
+  return false;
 }
 
 namespace {
